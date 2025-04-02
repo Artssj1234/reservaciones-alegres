@@ -28,8 +28,8 @@ export interface BusinessResponse {
 }
 
 // Custom login function that uses our database function
-export const customLogin = async (usuario: string, contrasena: string) => {
-  const { data, error } = await supabase.rpc<LoginResponse>("custom_login", {
+export const customLogin = async (usuario: string, contrasena: string): Promise<LoginResponse> => {
+  const { data, error } = await supabase.rpc("custom_login", {
     p_username: usuario,
     p_password: contrasena
   });
@@ -39,12 +39,13 @@ export const customLogin = async (usuario: string, contrasena: string) => {
     return { success: false, message: error.message };
   }
   
-  return data || { success: false, message: 'Error desconocido' };
+  // Ensure that data is properly typed as LoginResponse
+  return (data as LoginResponse) || { success: false, message: 'Error desconocido' };
 };
 
 // Get business data for a user
-export const getBusinessByUserId = async (userId: string) => {
-  const { data, error } = await supabase.rpc<BusinessResponse>("get_business_by_user_id", {
+export const getBusinessByUserId = async (userId: string): Promise<BusinessResponse> => {
+  const { data, error } = await supabase.rpc("get_business_by_user_id", {
     p_user_id: userId
   });
   
@@ -53,5 +54,6 @@ export const getBusinessByUserId = async (userId: string) => {
     return { success: false, message: error.message };
   }
   
-  return data || { success: false, message: 'Error desconocido' };
+  // Ensure that data is properly typed as BusinessResponse
+  return (data as BusinessResponse) || { success: false, message: 'Error desconocido' };
 };
