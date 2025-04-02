@@ -1,104 +1,153 @@
-import { useEffect, useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/lib/supabaseClient";
-import { Servicio, HorarioDisponible, DiaDisponible } from "@/types";
+import React, { useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { useNegocio } from './hooks/useNegocio';
+import { useDisponibilidad } from './hooks/useDisponibilidad';
+import { useCitaForm } from './hooks/useCitaForm';
 
-interface Props {
-  negocioId: string;
-}
+// Components
+import ServiceSelector from './components/ServiceSelector';
+import DateTimePicker from './components/DateTimePicker';
+import PersonalInfoForm from './components/PersonalInfoForm';
+import AppointmentSuccess from './components/AppointmentSuccess';
+import VerificarCitaDialog from './components/VerificarCitaDialog';
+import NegocioNotFound from './components/NegocioNotFound';
+import LoadingIndicator from './components/LoadingIndicator';
+import StepsContainer from './components/StepsContainer';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
-const CitaPublicaPage = ({ negocioId }: Props) => {
-  const { toast } = useToast();
+const CitaPublicaPage = () => {
+  const { slug } = useParams<{ slug: string }>();
+  const { negocio, servicios, isLoading: isLoadingNegocio, error: negocioError } = useNegocio(slug);
 
-  const [servicios, setServicios] = useState<Servicio[]>([]);
-  const [servicioId, setServicioId] = useState<string>("");
-  const [fecha, setFecha] = useState<Date>(new Date());
-  const [diasDisponibles, setDiasDisponibles] = useState<DiaDisponible[]>([]);
-  const [horasDisponibles, setHorasDisponibles] = useState<HorarioDisponible[]>([]);
+  const { 
+    formData, 
+    step, 
+    success, 
+    citaId, 
+    verificarDialogOpen,
+    telefono, 
+    citasEncontradas,
+    setVerificarDialogOpen, 
+    setTelefono,
+    handleInputChange,
+    handleServicioChange,
+    handleFechaChange, 
+    handleHoraChange, 
+    handleNext, 
+    handleBack,
+    handleSubmit,
+    handleVerificarCita,
+    handleDialogClose
+  } = useCitaForm(negocio?.id);
+
+  const {
+    horasDisponibles,
+    diasSeleccionablesMes,
+    cargandoHorarios,
+    isLoading: isLoadingDisponibilidad,
+    handleMonthChange
+  } = useDisponibilidad(negocio?.id, formData.servicio_id, formData.fecha);
 
   useEffect(() => {
-    if (negocioId) {
-      obtenerServicios();
+    if (negocio) {
+      console.log("CitaPublicaPage loaded with data:", {
+        negocioId: negocio.id,
+        serviciosCount: servicios.length,
+        step,
+        servicio_id: formData.servicio_id,
+        fecha: formData.fecha,
+        horasDisponiblesCount: horasDisponibles.length,
+        diasSeleccionablesCount: diasSeleccionablesMes.size,
+        diasSeleccionables: Array.from(diasSeleccionablesMes)
+      });
     }
-  }, [negocioId]);
+  }, [negocio, servicios, step, formData, horasDisponibles, diasSeleccionablesMes]);
 
-  useEffect(() => {
-    if (negocioId && servicioId) {
-      cargarDiasDisponibles(fecha.getFullYear(), fecha.getMonth() + 1);
-    }
-  }, [negocioId, servicioId]);
+  if (isLoadingNegocio && !negocio) {
+    return <LoadingIndicator message="Cargando información del negocio..." />;
+  }
 
-  useEffect(() => {
-    if (negocioId && servicioId && fecha) {
-      getHorariosDisponibles();
-    }
-  }, [fecha, servicioId]);
+  if (negocioError || !negocio) {
+    return <NegocioNotFound />;
+  }
 
-  const obtenerServicios = async () => {
-    const { data, error } = await supabase
-      .from("servicios")
-      .select("*")
-      .eq("negocio_id", negocioId);
+  if (success) {
+    return (
+      <AppointmentSuccess 
+        negocio={negocio}
+        formData={formData}
+        servicios={servicios}
+        citaId={citaId}
+        onVerificarClick={() => setVerificarDialogOpen(true)}
+      />
+    );
+  }
 
-    if (error) {
-      toast({ title: "Error al cargar servicios", description: error.message });
-    } else {
-      setServicios(data);
-    }
-  };
-
-  const cargarDiasDisponibles = async (anio: number, mes: number) => {
-    const { data, error } = await supabase.rpc("obtener_dias_disponibles_mes", {
-      p_negocio_id: negocioId,
-      p_anio: anio,
-      p_mes: mes,
-      p_servicio_id: servicioId
-    });
-
-    if (error) {
-      toast({ title: "Error al cargar disponibilidad", description: error.message });
-    } else {
-      setDiasDisponibles(data);
-    }
-  };
-
-  const getHorariosDisponibles = async () => {
-    const { data, error } = await supabase.rpc("obtener_horarios_disponibles", {
-      p_negocio_id: negocioId,
-      p_fecha: fecha.toISOString().split("T")[0],
-      p_servicio_id: servicioId // ✅ Solo este, NO p_duracion_minutos
-    });
-
-    if (error) {
-      toast({ title: "Error al obtener horarios", description: error.message });
-    } else {
-      setHorasDisponibles(data);
-    }
-  };
+  const selectedService = servicios.find(s => s.id === formData.servicio_id);
 
   return (
-    <div>
-      <h1>Reservar cita</h1>
+    <>
+      <StepsContainer 
+        title={negocio.nombre} 
+        currentStep={step}
+        onVerificarClick={() => setVerificarDialogOpen(true)}
+      >
+        {servicios.length === 0 && step === 1 && (
+          <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-800">
+            <AlertCircle className="h-4 w-4 mr-2" />
+            <AlertDescription>
+              Este negocio no tiene servicios configurados. Por favor, contacta directamente con el negocio.
+            </AlertDescription>
+          </Alert>
+        )}
 
-      <select value={servicioId} onChange={(e) => setServicioId(e.target.value)}>
-        <option value="">Selecciona un servicio</option>
-        {servicios.map((servicio) => (
-          <option key={servicio.id} value={servicio.id}>
-            {servicio.nombre}
-          </option>
-        ))}
-      </select>
+        {step === 1 && (
+          <ServiceSelector 
+            servicios={servicios}
+            selectedServiceId={formData.servicio_id}
+            onServiceChange={handleServicioChange}
+            onNext={servicios.length > 0 ? handleNext : undefined}
+          />
+        )}
 
-      {/* Aquí podrías agregar un calendario con los días disponibles */}
-      <p>Días disponibles: {diasDisponibles.length}</p>
-      <ul>
-        {horasDisponibles.map((hora, i) => (
-          <li key={i}>
-            {hora.hora_inicio} - {hora.hora_fin}
-          </li>
-        ))}
-      </ul>
-    </div>
+        {step === 2 && (
+          <DateTimePicker 
+            date={formData.fecha}
+            selectedTime={formData.hora_inicio}
+            diasSeleccionablesMes={diasSeleccionablesMes}
+            horasDisponibles={horasDisponibles}
+            cargandoHorarios={cargandoHorarios || isLoadingDisponibilidad}
+            duracionServicio={selectedService?.duracion_minutos || 30}
+            onDateChange={handleFechaChange}
+            onTimeChange={handleHoraChange}
+            onMonthChange={handleMonthChange}
+            onNext={handleNext}
+            onBack={handleBack}
+          />
+        )}
+
+        {step === 3 && (
+          <PersonalInfoForm 
+            formData={formData}
+            servicios={servicios}
+            onChange={handleInputChange}
+            onSubmit={(e) => handleSubmit(e, servicios)}
+            onBack={handleBack}
+          />
+        )}
+      </StepsContainer>
+
+      <VerificarCitaDialog
+        open={verificarDialogOpen}
+        onOpenChange={handleDialogClose}
+        telefono={telefono}
+        onTelefonoChange={(value) => setTelefono(value)}
+        citasEncontradas={citasEncontradas}
+        onVerificar={handleVerificarCita}
+      />
+    </>
   );
 };
 
