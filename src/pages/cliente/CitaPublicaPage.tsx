@@ -15,10 +15,12 @@ import VerificarCitaDialog from './components/VerificarCitaDialog';
 import NegocioNotFound from './components/NegocioNotFound';
 import LoadingIndicator from './components/LoadingIndicator';
 import StepsContainer from './components/StepsContainer';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 const CitaPublicaPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { negocio, servicios, isLoading: isLoadingNegocio } = useNegocio(slug);
+  const { negocio, servicios, isLoading: isLoadingNegocio, error: negocioError } = useNegocio(slug);
   
   const { 
     formData, 
@@ -69,7 +71,7 @@ const CitaPublicaPage = () => {
     return <LoadingIndicator message="Cargando información del negocio..." />;
   }
 
-  if (!negocio) {
+  if (negocioError || !negocio) {
     return <NegocioNotFound />;
   }
 
@@ -95,12 +97,21 @@ const CitaPublicaPage = () => {
         currentStep={step}
         onVerificarClick={() => setVerificarDialogOpen(true)}
       >
+        {servicios.length === 0 && step === 1 && (
+          <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-800">
+            <AlertCircle className="h-4 w-4 mr-2" />
+            <AlertDescription>
+              Este negocio no tiene servicios configurados. Por favor, contacta directamente con el negocio.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {step === 1 && (
           <ServiceSelector 
             servicios={servicios}
             selectedServiceId={formData.servicio_id}
             onServiceChange={handleServicioChange}
-            onNext={handleNext}
+            onNext={servicios.length > 0 ? handleNext : undefined}
           />
         )}
 

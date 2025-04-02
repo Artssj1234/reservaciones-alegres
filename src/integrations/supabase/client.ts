@@ -472,7 +472,7 @@ export const updateUserPassword = async (id: string, nuevaContrasena: string) =>
 
 // Nuevas funciones para obtener horarios disponibles para los clientes
 export const getHorariosDisponibles = async (negocioId: string, fecha: string, duracionMinutos: number = 0, servicioId?: string): Promise<{ success: boolean; message?: string; data: HorarioDisponible[] }> => {
-  console.log('Obteniendo horarios disponibles para negocio ID:', negocioId, 'en fecha:', fecha, 'para servicio ID:', servicioId);
+  console.log('Obteniendo horarios disponibles para negocio ID:', negocioId, 'en fecha:', fecha, 'para servicio ID:', servicioId || 'undefined');
   
   try {
     const params: { 
@@ -486,10 +486,12 @@ export const getHorariosDisponibles = async (negocioId: string, fecha: string, d
       p_duracion_minutos: duracionMinutos
     };
     
-    // Añadir el servicio_id solo si está definido
-    if (servicioId) {
+    // Añadir el servicio_id solo si está definido y no es una cadena vacía
+    if (servicioId && servicioId.trim() !== '') {
       params.p_servicio_id = servicioId;
     }
+    
+    console.log('Parámetros enviados para obtener horarios:', params);
     
     const { data, error } = await supabase.rpc(
       "obtener_horarios_disponibles",
@@ -517,7 +519,7 @@ export const getHorariosDisponibles = async (negocioId: string, fecha: string, d
 };
 
 export const getDiasDisponibles = async (negocioId: string, anio: number, mes: number, servicioId?: string): Promise<{ success: boolean; message?: string; data: DiaDisponible[] }> => {
-  console.log('Obteniendo días disponibles para negocio ID:', negocioId, 'en año:', anio, 'mes:', mes, 'servicio:', servicioId);
+  console.log('Obteniendo días disponibles para negocio ID:', negocioId, 'en año:', anio, 'mes:', mes, 'servicio:', servicioId || 'undefined');
   
   try {
     const params: { 
@@ -535,6 +537,8 @@ export const getDiasDisponibles = async (negocioId: string, anio: number, mes: n
     if (servicioId && servicioId.trim() !== '') {
       params.p_servicio_id = servicioId;
     }
+    
+    console.log('Parámetros enviados:', params);
     
     const { data, error } = await supabase.rpc(
       "obtener_dias_disponibles_mes",

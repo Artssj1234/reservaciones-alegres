@@ -9,6 +9,7 @@ import { es } from 'date-fns/locale';
 import { HorarioDisponible } from '@/types';
 import { useToast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface DateTimePickerProps {
   date: Date;
@@ -105,6 +106,28 @@ const DateTimePicker = ({
   };
 
   // Mostrar el indicador de carga mientras se está cargando el mes
+  if (diasSeleccionablesMes.size === 0 && !cargandoHorarios) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-xl font-medium text-center">Selecciona fecha y hora</h2>
+        
+        <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-800">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            No se pudo cargar la disponibilidad. Intenta más tarde.
+          </AlertDescription>
+        </Alert>
+        
+        <div className="flex justify-between">
+          <Button variant="outline" onClick={onBack}>
+            Atrás
+          </Button>
+          <Button disabled>Siguiente</Button>
+        </div>
+      </div>
+    );
+  }
+
   if (cargandoHorarios && horasDisponibles.length === 0) {
     return (
       <div className="space-y-6">

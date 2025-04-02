@@ -24,7 +24,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
       console.log(`Obteniendo días disponibles para negocio ID: ${negocioId} en año: ${anio}, mes: ${mes}, servicio: ${servicioId}`);
       setIsLoading(true);
       
-      // Pasamos servicioId solo si realmente tiene un valor
+      // Solo enviar servicioId si tiene un valor válido
       const servicioIdParaEnviar = servicioId && servicioId.trim() !== '' ? servicioId : undefined;
       
       const diasDispResult = await getDiasDisponibles(
@@ -180,8 +180,6 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
       setHorasDisponibles([]);
     }
   }, [negocioId, servicioId, fecha, toast]);
-
-  // Removed the duplicate handleMonthChange function that was previously defined here
 
   return {
     horasDisponibles,

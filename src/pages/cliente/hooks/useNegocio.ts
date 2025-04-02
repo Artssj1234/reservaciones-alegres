@@ -1,83 +1,91 @@
 
 import { useState, useEffect } from 'react';
-import { useToast } from '@/components/ui/use-toast';
+import { Negocio, Servicio } from '@/types';
 import { getNegocioBySlug, getServiciosByNegocioId } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 
 export const useNegocio = (slug: string | undefined) => {
-  const [negocio, setNegocio] = useState<any>(null);
-  const [servicios, setServicios] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [negocio, setNegocio] = useState<Negocio | null>(null);
+  const [servicios, setServicios] = useState<Servicio[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    const cargarDatosIniciales = async () => {
-      try {
-        setIsLoading(true);
-        
-        if (!slug) {
-          console.error('No se encontró slug en la URL');
-          toast({
-            title: "Error",
-            description: "URL inválida. No se pudo identificar el negocio.",
-            variant: "destructive",
-          });
-          return;
-        }
+    const fetchNegocio = async () => {
+      if (!slug) {
+        setIsLoading(false);
+        setError('Negocio no encontrado');
+        return;
+      }
 
+      setIsLoading(true);
+      setError(null);
+      
+      try {
         console.log('Obteniendo negocio por slug:', slug);
-        const negocioResult = await getNegocioBySlug(slug);
-        
-        if (!negocioResult.success || !negocioResult.data) {
-          toast({
-            title: "Error",
-            description: "No se encontró el negocio solicitado.",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        setNegocio(negocioResult.data);
-        
-        console.log('Obteniendo servicios para negocio ID:', negocioResult.data.id);
-        const serviciosResult = await getServiciosByNegocioId(negocioResult.data.id);
-        
-        if (serviciosResult.success) {
-          const serviciosActivos = serviciosResult.data.filter((s: any) => s.activo);
-          setServicios(serviciosActivos);
-          
-          if (serviciosActivos.length === 0) {
-            toast({
-              title: "Información",
-              description: "Este negocio aún no tiene servicios disponibles para reserva.",
-            });
-          }
+        const result = await getNegocioBySlug(slug);
+
+        if (result.success && result.data) {
+          setNegocio(result.data as Negocio);
+          await fetchServicios(result.data.id);
         } else {
-          console.error('Error al cargar servicios:', serviciosResult.message);
+          setError(result.message || 'No se pudo encontrar el negocio');
           toast({
             title: "Error",
-            description: "Ocurrió un error al cargar los servicios.",
-            variant: "destructive",
+            description: "No se pudo encontrar el negocio especificado.",
+            variant: "destructive"
           });
         }
-        
-      } catch (error) {
-        console.error('Error al cargar datos iniciales:', error);
+      } catch (err) {
+        console.error('Error al cargar el negocio:', err);
+        setError('Error al cargar el negocio');
         toast({
           title: "Error",
-          description: "Ocurrió un error al cargar los datos. Intenta de nuevo más tarde.",
-          variant: "destructive",
+          description: "Ocurrió un error al cargar la información del negocio.",
+          variant: "destructive"
         });
       } finally {
         setIsLoading(false);
       }
     };
-    
-    cargarDatosIniciales();
+
+    const fetchServicios = async (negocioId: string) => {
+      try {
+        console.log('Obteniendo servicios para negocio ID:', negocioId);
+        const result = await getServiciosByNegocioId(negocioId);
+
+        if (result.success && result.data) {
+          // Filtrar solo servicios activos
+          const serviciosActivos = result.data.filter(servicio => servicio.activo !== false);
+          setServicios(serviciosActivos);
+          
+          if (serviciosActivos.length === 0) {
+            toast({
+              title: "Información",
+              description: "Este negocio no tiene servicios configurados.",
+              duration: 5000
+            });
+          }
+        } else {
+          toast({
+            title: "Error",
+            description: "No se pudieron cargar los servicios del negocio.",
+            variant: "destructive"
+          });
+        }
+      } catch (err) {
+        console.error('Error al cargar servicios:', err);
+        toast({
+          title: "Error",
+          description: "Ocurrió un error al cargar los servicios.",
+          variant: "destructive"
+        });
+      }
+    };
+
+    fetchNegocio();
   }, [slug, toast]);
 
-  return {
-    negocio,
-    servicios,
-    isLoading
-  };
+  return { negocio, servicios, isLoading, error };
 };
