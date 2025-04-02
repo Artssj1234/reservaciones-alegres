@@ -181,20 +181,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
     }
   }, [negocioId, servicioId, fecha, toast]);
 
-  const handleMonthChange = useCallback((date: Date) => {
-    const nuevoAnio = date.getFullYear();
-    const nuevoMes = date.getMonth() + 1;
-    
-    console.log(`Month changed to: ${nuevoMes}/${nuevoAnio}`);
-    
-    // Solo actualizar si cambia el mes
-    if (nuevoAnio !== mesActual.anio || nuevoMes !== mesActual.mes) {
-      setMesActual({
-        anio: nuevoAnio,
-        mes: nuevoMes
-      });
-    }
-  }, [mesActual]);
+  // Removed the duplicate handleMonthChange function that was previously defined here
 
   return {
     horasDisponibles,
