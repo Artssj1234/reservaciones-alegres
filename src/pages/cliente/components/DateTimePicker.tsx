@@ -1,9 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
-import { Info, Loader2 } from 'lucide-react';
+import { Info, Loader2, AlertCircle } from 'lucide-react';
 import { format, isAfter, isBefore, addMonths, startOfMonth, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { HorarioDisponible } from '@/types';
@@ -38,6 +38,7 @@ const DateTimePicker = ({
   const hoy = new Date();
   const limiteMaximo = addMonths(hoy, 2);
   const currentMonth = startOfMonth(date);
+  const [fechaSeleccionada, setFechaSeleccionada] = useState<Date | undefined>(date);
   
   // Debug logging
   console.log('DateTimePicker render:', {
@@ -46,6 +47,7 @@ const DateTimePicker = ({
     diasSeleccionablesCount: diasSeleccionablesMes.size,
     diasDisponibles: Array.from(diasSeleccionablesMes),
     horasDisponiblesCount: horasDisponibles.length,
+    currentDayOfWeek: format(date, 'EEEE', { locale: es }),
   });
 
   const handleMonthChangeDebug = (newDate: Date) => {
@@ -60,7 +62,16 @@ const DateTimePicker = ({
   const esDiaDisponible = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const isAvailable = diasSeleccionablesMes.has(dateStr);
+    console.log(`Checking availability for ${dateStr}: ${isAvailable}`);
     return isAvailable;
+  };
+  
+  const handleDateSelect = (newDate: Date | undefined) => {
+    if (newDate) {
+      console.log('Date selected:', format(newDate, 'yyyy-MM-dd'));
+      setFechaSeleccionada(newDate);
+      onDateChange(newDate);
+    }
   };
 
   // Mostrar el indicador de carga mientras se está cargando el mes
@@ -103,13 +114,8 @@ const DateTimePicker = ({
             <div className="border rounded-md p-3">
               <Calendar
                 mode="single"
-                selected={date}
-                onSelect={(newDate) => {
-                  if (newDate) {
-                    console.log('Date selected:', format(newDate, 'yyyy-MM-dd'));
-                    onDateChange(newDate);
-                  }
-                }}
+                selected={fechaSeleccionada}
+                onSelect={handleDateSelect}
                 onMonthChange={handleMonthChangeDebug}
                 disabled={(date) => {
                   // Deshabilitar fechas pasadas y más de 2 meses en el futuro
@@ -132,25 +138,29 @@ const DateTimePicker = ({
           <div>
             <Label className="mb-2 block">Hora Disponible</Label>
             {cargandoHorarios ? (
-              <div className="border rounded-md p-4 h-full flex items-center justify-center">
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                <p className="text-gray-500">Cargando horarios disponibles...</p>
+              <div className="border rounded-md p-4 flex items-center justify-center h-72">
+                <Loader2 className="h-6 w-6 animate-spin mr-2 text-blue-500" />
+                <p className="text-gray-600">Cargando horarios disponibles...</p>
               </div>
             ) : horasDisponibles.length === 0 ? (
-              <div className="border rounded-md p-4 bg-gray-50 h-full flex items-center justify-center">
-                <p className="text-gray-500 text-center">
-                  No hay horas disponibles para la fecha seleccionada
+              <div className="border rounded-md p-4 bg-gray-50 h-72 flex flex-col items-center justify-center">
+                <AlertCircle className="h-8 w-8 text-amber-500 mb-2" />
+                <p className="text-gray-700 text-center font-medium">
+                  No hay horas disponibles
+                </p>
+                <p className="text-sm text-gray-500 text-center mt-1">
+                  Por favor selecciona otra fecha o contacta directamente con el negocio
                 </p>
               </div>
             ) : (
               <div className="border rounded-md p-4 h-72 overflow-y-auto">
                 <div className="grid grid-cols-2 gap-2">
-                  {horasDisponibles.map((hora, index) => (
+                  {horasDisponibles.filter(hora => hora.disponible).map((hora, index) => (
                     <div
                       key={index}
                       className={`p-2 border rounded text-center cursor-pointer transition-colors ${
                         selectedTime === hora.hora_inicio
-                          ? 'border-blue-600 bg-blue-50'
+                          ? 'border-blue-600 bg-blue-50 font-medium'
                           : 'hover:border-gray-400'
                       }`}
                       onClick={() => onTimeChange(hora.hora_inicio)}

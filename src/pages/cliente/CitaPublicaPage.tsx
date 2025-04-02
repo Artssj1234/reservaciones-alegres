@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -54,7 +53,6 @@ const CitaPublicaPage = () => {
   });
   const { toast } = useToast();
   
-  // Cargar negocio y servicios
   useEffect(() => {
     const cargarDatosIniciales = async () => {
       try {
@@ -121,12 +119,20 @@ const CitaPublicaPage = () => {
     cargarDatosIniciales();
   }, [slug, toast]);
   
-  // Cargar días disponibles cada vez que cambia el mes o el negocio
+  useEffect(() => {
+    if (negocio?.id) {
+      setDiasSeleccionablesMes(new Set());
+      cargarDiasDisponibles(mesActual.anio, mesActual.mes);
+    }
+  }, [negocio?.id, mesActual, cargarDiasDisponibles]);
+  
   const cargarDiasDisponibles = useCallback(async (anio: number, mes: number) => {
     if (!negocio?.id) return;
     
     try {
       console.log(`Obteniendo días disponibles para negocio ID: ${negocio.id} en año: ${anio}, mes: ${mes}`);
+      setIsLoading(true);
+      
       const diasDispResult = await getDiasDisponibles(negocio.id, anio, mes);
       
       if (diasDispResult.success && diasDispResult.data) {
@@ -140,6 +146,10 @@ const CitaPublicaPage = () => {
             fechasDisponibles.add(format(new Date(dia.fecha), 'yyyy-MM-dd'));
           }
         });
+        
+        console.log(`Fechas disponibles encontradas: ${fechasDisponibles.size}`, 
+          Array.from(fechasDisponibles).join(', '));
+          
         setDiasSeleccionablesMes(fechasDisponibles);
         
         // Si no hay días disponibles, mostrar mensaje
@@ -152,21 +162,17 @@ const CitaPublicaPage = () => {
       } else {
         console.error('Error al cargar días disponibles:', diasDispResult.message);
         setDiasDisponibles([]);
+        setDiasSeleccionablesMes(new Set());
       }
     } catch (error) {
       console.error('Error en cargarDiasDisponibles:', error);
       setDiasDisponibles([]);
+      setDiasSeleccionablesMes(new Set());
+    } finally {
+      setIsLoading(false);
     }
   }, [negocio?.id, toast]);
-
-  // Efecto para cargar los días disponibles cuando cambia el mes o cuando hay un negocio
-  useEffect(() => {
-    if (negocio?.id) {
-      cargarDiasDisponibles(mesActual.anio, mesActual.mes);
-    }
-  }, [negocio?.id, mesActual, cargarDiasDisponibles]);
   
-  // Cargar horas disponibles cuando cambia el servicio o la fecha
   useEffect(() => {
     const cargarHorasDisponibles = async () => {
       if (!negocio?.id || !formData.servicio_id || !formData.fecha) return;
@@ -187,14 +193,26 @@ const CitaPublicaPage = () => {
         );
         
         if (result.success && result.data) {
+          // Mostrar todos los horarios para depuración
+          console.log('Horarios recibidos:', result.data);
+          
           // Filtrar solo los horarios disponibles
           const horariosDisp = Array.isArray(result.data) 
-            ? result.data.filter(h => h.disponible) 
+            ? result.data
             : [];
             
           setHorasDisponibles(horariosDisp);
           
-          if (horariosDisp.length === 0) {
+          const horariosDisponibles = horariosDisp.filter(h => h.disponible);
+          
+          console.log(`Se encontraron ${horariosDisponibles.length} horarios disponibles de ${horariosDisp.length} totales`);
+          
+          if (horariosDisponibles.length === 0) {
+            setFormData(prev => ({
+              ...prev,
+              hora_inicio: ''
+            }));
+            
             toast({
               title: "Información",
               description: "No hay horarios disponibles para la fecha seleccionada.",
@@ -203,6 +221,10 @@ const CitaPublicaPage = () => {
         } else {
           console.error('Error al cargar horas disponibles:', result.message);
           setHorasDisponibles([]);
+          setFormData(prev => ({
+            ...prev,
+            hora_inicio: ''
+          }));
         }
       } catch (error) {
         console.error('Error al cargar horas disponibles:', error);
@@ -215,7 +237,6 @@ const CitaPublicaPage = () => {
     cargarHorasDisponibles();
   }, [formData.servicio_id, formData.fecha, negocio?.id, servicios, toast]);
 
-  // Manejar cambio de mes en el calendario
   const handleMonthChange = (date: Date) => {
     const nuevoAnio = date.getFullYear();
     const nuevoMes = date.getMonth() + 1;
@@ -385,16 +406,14 @@ const CitaPublicaPage = () => {
     setTelefono('');
   };
 
-  // Renderizado condicional para estados de carga y error
-  if (isLoading) {
-    return <LoadingIndicator />;
+  if (isLoading && !negocio) {
+    return <LoadingIndicator message="Cargando información del negocio..." />;
   }
 
   if (!negocio) {
     return <NegocioNotFound />;
   }
 
-  // Renderizar pantalla de éxito
   if (success) {
     return (
       <AppointmentSuccess 
