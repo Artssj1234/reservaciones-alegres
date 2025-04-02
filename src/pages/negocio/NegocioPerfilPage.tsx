@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { supabase } from '@/integrations/supabase/client';
+import { updateNegocioPerfil, updateUserPassword } from '@/integrations/supabase/client';
 
 const NegocioPerfilPage = () => {
   const { auth, updateNegocio } = useAuth();
@@ -48,14 +48,12 @@ const NegocioPerfilPage = () => {
       setIsLoading(true);
       
       try {
-        // Aquí cargaríamos datos adicionales del negocio desde Supabase
-        // Por ahora solo usamos los datos que ya tenemos en auth
-        
-        // Para una implementación real, obtenemos datos del perfil del negocio desde Supabase
+        // En una implementación real, cargaríamos datos adicionales del negocio
+        // Por ahora usamos los datos que ya tenemos en auth
         setFormData(prev => ({
           ...prev,
           nombre: auth.negocio?.nombre || 'Mi Negocio',
-          // Los demás campos se cargarían desde Supabase
+          // Los demás campos se cargarían desde la base de datos
         }));
       } catch (error) {
         console.error('Error al cargar datos del perfil:', error);
@@ -70,7 +68,7 @@ const NegocioPerfilPage = () => {
     };
     
     loadNegocioData();
-  }, [auth.negocio?.id, toast]);
+  }, [auth.negocio?.id, auth.negocio?.nombre, toast]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -114,13 +112,13 @@ const NegocioPerfilPage = () => {
     
     try {
       // Actualizar nombre del negocio
-      const { error: negocioError } = await supabase
-        .from('negocios')
-        .update({ nombre: formData.nombre })
-        .eq('id', auth.negocio.id);
+      const result = await updateNegocioPerfil(auth.negocio.id, { 
+        nombre: formData.nombre,
+        // Si tenemos campos adicionales en el formulario, los añadimos aquí
+      });
         
-      if (negocioError) {
-        console.error('Error al actualizar el negocio:', negocioError);
+      if (!result.success) {
+        console.error('Error al actualizar el negocio:', result.message);
         toast({
           title: "Error",
           description: "No se pudo actualizar la información del negocio.",
@@ -131,13 +129,10 @@ const NegocioPerfilPage = () => {
       
       // Si el usuario está cambiando la contraseña, actualizarla
       if (cambiarContrasena && formData.nuevaContrasena) {
-        const { error: usuarioError } = await supabase
-          .from('usuarios')
-          .update({ contrasena: formData.nuevaContrasena })
-          .eq('id', auth.usuario.id);
+        const passwordResult = await updateUserPassword(auth.usuario.id, formData.nuevaContrasena);
           
-        if (usuarioError) {
-          console.error('Error al actualizar la contraseña:', usuarioError);
+        if (!passwordResult.success) {
+          console.error('Error al actualizar la contraseña:', passwordResult.message);
           toast({
             title: "Error",
             description: "No se pudo actualizar la contraseña.",
