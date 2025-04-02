@@ -2,27 +2,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Clock, ChevronRight } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { CalendarRange, Clock, CheckCircle2, ChevronRight, Info, Scissors } from 'lucide-react';
 import { 
   getNegocioBySlug,
   getServiciosByNegocioId,
@@ -32,8 +14,17 @@ import {
   getCitaByTelefono
 } from '@/integrations/supabase/client';
 import { HorarioDisponible, DiaDisponible } from '@/types';
-import { format, isAfter, isBefore, addDays, addMonths } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { format } from 'date-fns';
+
+// Components
+import ServiceSelector from './components/ServiceSelector';
+import DateTimePicker from './components/DateTimePicker';
+import PersonalInfoForm from './components/PersonalInfoForm';
+import AppointmentSuccess from './components/AppointmentSuccess';
+import VerificarCitaDialog from './components/VerificarCitaDialog';
+import StepsIndicator from './components/StepsIndicator';
+import NegocioNotFound from './components/NegocioNotFound';
+import LoadingIndicator from './components/LoadingIndicator';
 
 const CitaPublicaPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -63,9 +54,6 @@ const CitaPublicaPage = () => {
   });
   const { toast } = useToast();
   
-  const hoy = new Date();
-  const limiteMaximo = addMonths(hoy, 2);
-
   // Cargar negocio y servicios
   useEffect(() => {
     const cargarDatosIniciales = async () => {
@@ -391,120 +379,31 @@ const CitaPublicaPage = () => {
     }
   };
 
-  const formatFecha = (fechaStr: string) => {
-    try {
-      return format(new Date(fechaStr), 'dd/MM/yyyy');
-    } catch (e) {
-      return fechaStr;
-    }
+  const handleDialogClose = () => {
+    setVerificarDialogOpen(false);
+    setCitasEncontradas([]);
+    setTelefono('');
   };
 
-  const esDiaDisponible = (date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    return diasSeleccionablesMes.has(dateStr);
-  };
-
+  // Renderizado condicional para estados de carga y error
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-center">
-          <p className="text-xl text-gray-600">Cargando...</p>
-        </div>
-      </div>
-    );
+    return <LoadingIndicator />;
   }
 
   if (!negocio) {
-    return (
-      <div className="container max-w-xl mx-auto px-4 py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Negocio no encontrado</CardTitle>
-            <CardDescription>
-              El negocio que buscas no existe o la URL es incorrecta.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>Por favor, verifica la dirección o contacta con el negocio para obtener la URL correcta.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <NegocioNotFound />;
   }
 
+  // Renderizar pantalla de éxito
   if (success) {
-    const servicioSeleccionado = servicios.find(s => s.id === formData.servicio_id);
-    
     return (
-      <div className="container max-w-xl mx-auto px-4 py-8">
-        <Card className="mb-8">
-          <CardHeader className="text-center bg-green-50">
-            <CalendarRange className="w-16 h-16 mx-auto text-green-600" />
-            <CardTitle className="text-2xl text-green-700">¡Gracias por tu reserva!</CardTitle>
-            <CardDescription>
-              Hemos recibido tu solicitud de cita correctamente.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-medium">{negocio.nombre}</h3>
-                <p className="text-gray-500">
-                  <span className="font-medium">Servicio:</span> {servicioSeleccionado?.nombre}
-                </p>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Fecha</p>
-                  <p>{format(formData.fecha, 'EEEE, d MMMM yyyy', { locale: es })}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Hora</p>
-                  <p>{formData.hora_inicio}</p>
-                </div>
-              </div>
-              
-              <div className="border-t border-gray-200 pt-4">
-                <p className="text-sm font-medium text-gray-500">Estado de la cita</p>
-                <div className="flex items-center space-x-2 mt-1">
-                  <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
-                    Pendiente de confirmación
-                  </span>
-                </div>
-              </div>
-              
-              <div className="bg-gray-50 p-4 rounded-md">
-                <p className="text-sm text-gray-600">
-                  Tu cita está <strong>pendiente de confirmación</strong> por parte del negocio.
-                  Recibirás una confirmación cuando sea aceptada. También puedes verificar el estado
-                  de tu cita introduciendo tu número de teléfono.
-                </p>
-                <p className="text-sm text-gray-600 mt-2">
-                  <span className="font-medium">ID de tu cita:</span> {citaId}
-                </p>
-              </div>
-              
-              <div className="flex justify-center pt-2">
-                <Button variant="outline" onClick={() => setVerificarDialogOpen(true)}>
-                  <Clock className="mr-2 h-4 w-4" />
-                  Verificar estado de cita
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <div className="text-center">
-          <Button 
-            variant="ghost" 
-            className="text-blue-600 hover:text-blue-800"
-            onClick={() => window.location.reload()}
-          >
-            Reservar otra cita
-          </Button>
-        </div>
-      </div>
+      <AppointmentSuccess 
+        negocio={negocio}
+        formData={formData}
+        servicios={servicios}
+        citaId={citaId}
+        onVerificarClick={() => setVerificarDialogOpen(true)}
+      />
     );
   }
 
@@ -518,218 +417,40 @@ const CitaPublicaPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
-          {/* Indicador de pasos */}
-          <div className="flex justify-center mb-8">
-            <div className="flex items-center">
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                1
-              </div>
-              <div className={`w-16 h-1 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                2
-              </div>
-              <div className={`w-16 h-1 ${step >= 3 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                3
-              </div>
-            </div>
-          </div>
+          <StepsIndicator currentStep={step} />
 
-          {/* Paso 1: Seleccionar servicio */}
           {step === 1 && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-medium text-center">Selecciona un servicio</h2>
-              
-              <div className="space-y-4">
-                {servicios.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Scissors className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-                    <p className="text-gray-500">No hay servicios disponibles en este momento.</p>
-                    <p className="text-sm text-gray-400 mt-2">Contacta directamente con el negocio para más información.</p>
-                  </div>
-                ) : (
-                  servicios.map(servicio => (
-                    <div
-                      key={servicio.id}
-                      className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                        formData.servicio_id === servicio.id
-                          ? 'border-blue-600 bg-blue-50'
-                          : 'hover:border-gray-400'
-                      }`}
-                      onClick={() => handleServicioChange(servicio.id)}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h3 className="font-medium">{servicio.nombre}</h3>
-                          <p className="text-sm text-gray-500">Duración: {servicio.duracion_minutos} minutos</p>
-                        </div>
-                        {formData.servicio_id === servicio.id && (
-                          <CheckCircle2 className="h-5 w-5 text-blue-600" />
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-              
-              <div className="flex justify-end">
-                <Button onClick={handleNext} disabled={!formData.servicio_id || servicios.length === 0}>
-                  Siguiente
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <ServiceSelector 
+              servicios={servicios}
+              selectedServiceId={formData.servicio_id}
+              onServiceChange={handleServicioChange}
+              onNext={handleNext}
+            />
           )}
 
-          {/* Paso 2: Seleccionar fecha y hora */}
           {step === 2 && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-medium text-center">Selecciona fecha y hora</h2>
-              
-              {diasSeleccionablesMes.size === 0 && (
-                <div className="text-center p-6 bg-gray-50 rounded-lg">
-                  <Info className="mx-auto h-10 w-10 text-blue-500 mb-3" />
-                  <p className="text-gray-700">Este negocio no tiene horarios disponibles configurados para este mes.</p>
-                  <p className="text-sm text-gray-500 mt-1">Prueba con otro mes o contacta directamente con el negocio.</p>
-                </div>
-              )}
-              
-              {diasSeleccionablesMes.size > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="mb-2 block">Fecha</Label>
-                    <div className="border rounded-md p-3">
-                      <Calendar
-                        mode="single"
-                        selected={formData.fecha}
-                        onSelect={handleFechaChange}
-                        onMonthChange={handleMonthChange}
-                        disabled={(date) => {
-                          // Deshabilitar fechas pasadas y más de 2 meses en el futuro
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          
-                          if (isBefore(date, today) || isAfter(date, limiteMaximo)) {
-                            return true;
-                          }
-                          
-                          // Verificar disponibilidad según los días disponibles
-                          return !esDiaDisponible(date);
-                        }}
-                        locale={es}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <Label className="mb-2 block">Hora Disponible</Label>
-                    {cargandoHorarios ? (
-                      <div className="border rounded-md p-4 h-full flex items-center justify-center">
-                        <p className="text-gray-500">Cargando horarios disponibles...</p>
-                      </div>
-                    ) : horasDisponibles.length === 0 ? (
-                      <div className="border rounded-md p-4 bg-gray-50 h-full flex items-center justify-center">
-                        <p className="text-gray-500 text-center">
-                          {!formData.servicio_id 
-                            ? "Por favor, selecciona un servicio primero" 
-                            : "No hay horas disponibles para la fecha seleccionada"}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="border rounded-md p-4 h-72 overflow-y-auto">
-                        <div className="grid grid-cols-2 gap-2">
-                          {horasDisponibles.map((hora, index) => (
-                            <div
-                              key={index}
-                              className={`p-2 border rounded text-center cursor-pointer transition-colors ${
-                                formData.hora_inicio === hora.hora_inicio
-                                  ? 'border-blue-600 bg-blue-50'
-                                  : 'hover:border-gray-400'
-                              }`}
-                              onClick={() => handleHoraChange(hora.hora_inicio)}
-                            >
-                              {hora.hora_inicio}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex justify-between">
-                <Button variant="outline" onClick={handleBack}>
-                  Atrás
-                </Button>
-                <Button 
-                  onClick={handleNext} 
-                  disabled={!formData.hora_inicio || diasSeleccionablesMes.size === 0}
-                >
-                  Siguiente
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <DateTimePicker 
+              date={formData.fecha}
+              selectedTime={formData.hora_inicio}
+              diasSeleccionablesMes={diasSeleccionablesMes}
+              horasDisponibles={horasDisponibles}
+              cargandoHorarios={cargandoHorarios}
+              onDateChange={handleFechaChange}
+              onTimeChange={handleHoraChange}
+              onMonthChange={handleMonthChange}
+              onNext={handleNext}
+              onBack={handleBack}
+            />
           )}
 
-          {/* Paso 3: Datos personales */}
           {step === 3 && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-medium text-center">Completa tus datos</h2>
-              
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nombre_cliente">Nombre completo</Label>
-                  <Input
-                    id="nombre_cliente"
-                    name="nombre_cliente"
-                    value={formData.nombre_cliente}
-                    onChange={handleInputChange}
-                    placeholder="Introduce tu nombre"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="telefono_cliente">Teléfono</Label>
-                  <Input
-                    id="telefono_cliente"
-                    name="telefono_cliente"
-                    value={formData.telefono_cliente}
-                    onChange={handleInputChange}
-                    placeholder="Ej: +34612345678"
-                    required
-                  />
-                  <p className="text-xs text-gray-500">
-                    Tu número de teléfono te permitirá verificar el estado de tu cita posteriormente.
-                  </p>
-                </div>
-                
-                <div className="bg-gray-50 p-4 rounded-md mt-6">
-                  <h3 className="font-medium mb-2">Resumen de tu cita</h3>
-                  <div className="grid grid-cols-2 gap-y-2 text-sm">
-                    <p className="text-gray-600">Servicio:</p>
-                    <p>{servicios.find(s => s.id === formData.servicio_id)?.nombre}</p>
-                    
-                    <p className="text-gray-600">Fecha:</p>
-                    <p>{format(formData.fecha, 'dd/MM/yyyy')}</p>
-                    
-                    <p className="text-gray-600">Hora:</p>
-                    <p>{formData.hora_inicio}</p>
-                  </div>
-                </div>
-                
-                <div className="flex justify-between pt-4">
-                  <Button type="button" variant="outline" onClick={handleBack}>
-                    Atrás
-                  </Button>
-                  <Button type="submit">
-                    Confirmar Cita
-                  </Button>
-                </div>
-              </form>
-            </div>
+            <PersonalInfoForm 
+              formData={formData}
+              servicios={servicios}
+              onChange={handleInputChange}
+              onSubmit={handleSubmit}
+              onBack={handleBack}
+            />
           )}
         </CardContent>
         <CardFooter className="flex justify-center border-t p-4">
@@ -744,81 +465,14 @@ const CitaPublicaPage = () => {
         </CardFooter>
       </Card>
 
-      {/* Dialog para verificar cita */}
-      <Dialog open={verificarDialogOpen} onOpenChange={setVerificarDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Verificar estado de cita</DialogTitle>
-            <DialogDescription>
-              Introduce el número de teléfono con el que realizaste la reserva.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="verificar-telefono">Teléfono</Label>
-              <Input
-                id="verificar-telefono"
-                value={telefono}
-                onChange={(e) => setTelefono(e.target.value)}
-                placeholder="Ej: +34612345678"
-              />
-            </div>
-            
-            {citasEncontradas.length > 0 && (
-              <div className="space-y-3 mt-4">
-                <h3 className="font-medium">Citas encontradas:</h3>
-                
-                {citasEncontradas.map((cita, index) => (
-                  <div key={index} className="border rounded-md p-4 bg-gray-50">
-                    <div className="grid grid-cols-2 gap-y-2 text-sm">
-                      <p className="text-gray-600">Negocio:</p>
-                      <p>{cita.negocios?.nombre || 'No especificado'}</p>
-                      
-                      <p className="text-gray-600">Servicio:</p>
-                      <p>{cita.servicios?.nombre || 'No especificado'}</p>
-                      
-                      <p className="text-gray-600">Fecha:</p>
-                      <p>{formatFecha(cita.fecha)}</p>
-                      
-                      <p className="text-gray-600">Hora:</p>
-                      <p>{cita.hora_inicio} - {cita.hora_fin}</p>
-                      
-                      <p className="text-gray-600">Estado:</p>
-                      <p>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          cita.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 
-                          cita.estado === 'aceptada' ? 'bg-green-100 text-green-800' : 
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {cita.estado === 'pendiente' ? 'Pendiente' : 
-                           cita.estado === 'aceptada' ? 'Aceptada' : 
-                           'Rechazada'}
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter>
-            {citasEncontradas.length === 0 && (
-              <Button onClick={handleVerificarCita}>
-                Verificar
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => {
-              setVerificarDialogOpen(false);
-              setCitasEncontradas([]);
-              setTelefono('');
-            }}>
-              {citasEncontradas.length > 0 ? 'Cerrar' : 'Cancelar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <VerificarCitaDialog
+        open={verificarDialogOpen}
+        onOpenChange={handleDialogClose}
+        telefono={telefono}
+        onTelefonoChange={(value) => setTelefono(value)}
+        citasEncontradas={citasEncontradas}
+        onVerificar={handleVerificarCita}
+      />
     </div>
   );
 };
