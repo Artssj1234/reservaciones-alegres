@@ -29,7 +29,7 @@ const LoginPage = () => {
           description: "Has iniciado sesión correctamente.",
         });
         
-        // Redirigir según el rol
+        // Redirigir según el rol (este valor ya viene desde el contexto de Auth)
         if (usuario === 'admin') {
           navigate('/admin');
         } else {

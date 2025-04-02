@@ -297,9 +297,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      custom_login: {
+        Args: {
+          p_username: string
+          p_password: string
+        }
+        Returns: Json
+      }
       eliminar_bloqueos_expirados: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      get_business_by_user_id: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: Json
       }
     }
     Enums: {

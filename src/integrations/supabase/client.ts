@@ -10,3 +10,32 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+// Custom login function that uses our database function
+export const customLogin = async (usuario: string, contrasena: string) => {
+  const { data, error } = await supabase.rpc('custom_login', {
+    p_username: usuario,
+    p_password: contrasena
+  });
+  
+  if (error) {
+    console.error('Error en custom login:', error);
+    return { success: false, message: error.message };
+  }
+  
+  return data || { success: false, message: 'Error desconocido' };
+};
+
+// Get business data for a user
+export const getBusinessByUserId = async (userId: string) => {
+  const { data, error } = await supabase.rpc('get_business_by_user_id', {
+    p_user_id: userId
+  });
+  
+  if (error) {
+    console.error('Error al obtener datos del negocio:', error);
+    return { success: false, message: error.message };
+  }
+  
+  return data || { success: false, message: 'Error desconocido' };
+};

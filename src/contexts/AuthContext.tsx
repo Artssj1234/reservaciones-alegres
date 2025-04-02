@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthState, Usuario, Negocio } from '@/types';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, customLogin, getBusinessByUserId } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   auth: AuthState;
@@ -40,38 +40,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Login usando nuestra tabla personalizada de usuarios
+  // Login usando nuestra función personalizada
   const login = async (usuario: string, contrasena: string): Promise<boolean> => {
     try {
-      // Consultar la tabla de usuarios personalizada
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('*')
-        .eq('usuario', usuario)
-        .eq('contrasena', contrasena)
-        .single();
-
-      if (error || !data) {
-        console.error('Error de autenticación:', error);
+      console.log("Intentando login con:", usuario);
+      
+      const result = await customLogin(usuario, contrasena);
+      
+      if (!result.success) {
+        console.error('Error de autenticación:', result.message);
         return false;
       }
 
-      const usuarioAutenticado: Usuario = data as Usuario;
+      const usuarioAutenticado: Usuario = {
+        id: result.user_id,
+        rol: result.role,
+        usuario: usuario,
+        contrasena: '',  // No almacenamos la contraseña en el cliente
+        creado_en: new Date().toISOString()
+      };
 
       let negocioData: Negocio | null = null;
 
       // Si es un usuario de tipo negocio, obtenemos los datos del negocio
       if (usuarioAutenticado.rol === 'negocio') {
-        const { data: negocioResult, error: negocioError } = await supabase
-          .from('negocios')
-          .select('*')
-          .eq('usuario_id', usuarioAutenticado.id)
-          .single();
-
-        if (negocioError) {
-          console.error('Error al obtener datos del negocio:', negocioError);
-        } else if (negocioResult) {
-          negocioData = negocioResult as Negocio;
+        const businessResult = await getBusinessByUserId(usuarioAutenticado.id);
+        
+        if (businessResult.success && businessResult.business) {
+          negocioData = businessResult.business as Negocio;
+        } else {
+          console.error('Error al obtener datos del negocio:', businessResult.message);
         }
       }
 
