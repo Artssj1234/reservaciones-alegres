@@ -54,9 +54,17 @@ export const customLogin = async (usuario: string, contrasena: string): Promise<
   }
   
   // Properly handle the JSON response with type checking
-  if (isLoginResponse(data)) {
-    console.log('Login exitoso para:', usuario, 'con rol:', data.role);
-    return data;
+  if (data && typeof data === 'object') {
+    if (isLoginResponse(data)) {
+      console.log('Login exitoso para:', usuario, 'con rol:', data.role);
+      return data;
+    } else {
+      // Intenta convertir la respuesta genérica a LoginResponse
+      const loginResponse = data as unknown as LoginResponse;
+      if (loginResponse.success !== undefined) {
+        return loginResponse;
+      }
+    }
   }
   
   console.error('Formato de respuesta inesperado:', data);
@@ -79,8 +87,16 @@ export const getBusinessByUserId = async (userId: string): Promise<BusinessRespo
   }
   
   // Properly handle the JSON response with type checking
-  if (isBusinessResponse(data)) {
-    return data;
+  if (data && typeof data === 'object') {
+    if (isBusinessResponse(data)) {
+      return data;
+    } else {
+      // Intenta convertir la respuesta genérica a BusinessResponse
+      const businessResponse = data as unknown as BusinessResponse;
+      if (businessResponse.success !== undefined) {
+        return businessResponse;
+      }
+    }
   }
   
   console.error('Formato de respuesta inesperado:', data);

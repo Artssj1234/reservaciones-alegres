@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +7,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
 import { Search, CheckCircle, XCircle, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { SolicitudNegocio } from '@/types';
 
@@ -15,6 +18,9 @@ const AdminSolicitudesPage = () => {
   const [selectedSolicitud, setSelectedSolicitud] = useState<SolicitudNegocio | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [showError, setShowError] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -23,6 +29,7 @@ const AdminSolicitudesPage = () => {
 
   const fetchSolicitudes = async () => {
     try {
+      console.log('Obteniendo solicitudes...');
       const { data, error } = await supabase
         .from('solicitudes_negocio')
         .select('*')
@@ -32,6 +39,7 @@ const AdminSolicitudesPage = () => {
         throw error;
       }
 
+      console.log('Solicitudes obtenidas:', data);
       setSolicitudes(data as SolicitudNegocio[]);
       setLoading(false);
     } catch (error: any) {
@@ -62,30 +70,43 @@ const AdminSolicitudesPage = () => {
   };
 
   const handleAprobar = async (id: string) => {
-    setLoading(true);
+    setProcessingId(id);
     try {
+      console.log('Aprobando solicitud ID:', id);
+      
       // 1. Actualizar estado de la solicitud
       const { error: updateError } = await supabase
         .from('solicitudes_negocio')
         .update({ estado: 'aceptado' })
         .eq('id', id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Error al actualizar solicitud:', updateError);
+        throw updateError;
+      }
 
-      // 2. Obtener datos de la solicitud
+      console.log('Solicitud actualizada correctamente');
+
+      // 2. Esperar un momento para que el trigger se ejecute
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // 3. Obtener datos de la solicitud actualizada
       const { data: solicitudData, error: solicitudError } = await supabase
         .from('solicitudes_negocio')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (solicitudError || !solicitudData) throw solicitudError || new Error('No se encontró la solicitud');
-
-      // The trigger will handle user and business creation automatically
+      if (solicitudError || !solicitudData) {
+        console.error('Error al obtener solicitud actualizada:', solicitudError);
+        throw solicitudError || new Error('No se encontró la solicitud');
+      }
       
-      // 3. Actualizar interfaz
+      console.log('Solicitud actualizada recuperada:', solicitudData);
+
+      // 4. Actualizar interfaz
       setSolicitudes(prev => prev.map(sol => 
-        sol.id === id ? { ...sol, estado: 'aceptado' } : sol
+        sol.id === id ? { ...sol, estado: 'aceptado' } as SolicitudNegocio : sol
       ));
 
       toast({
@@ -96,19 +117,26 @@ const AdminSolicitudesPage = () => {
       setDetailsOpen(false);
     } catch (error: any) {
       console.error('Error al aprobar solicitud:', error);
+      
+      // Guardar detalles del error para mostrarlos
+      const errorMsg = error.message || "Error desconocido al aprobar la solicitud";
+      setErrorDetails(`${errorMsg}\n\nPosible causa: Problemas con Row Level Security (RLS) en las tablas. Por favor, contacta al administrador del sistema.`);
+      setShowError(true);
+      
       toast({
         title: "Error al aprobar",
-        description: error.message || "No se pudo aprobar la solicitud. Inténtalo de nuevo.",
+        description: "Ha ocurrido un error. Ver detalles para más información.",
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setProcessingId(null);
     }
   };
 
   const handleRechazar = async (id: string) => {
-    setLoading(true);
+    setProcessingId(id);
     try {
+      console.log('Rechazando solicitud ID:', id);
       const { error } = await supabase
         .from('solicitudes_negocio')
         .update({ estado: 'rechazado' })
@@ -117,7 +145,7 @@ const AdminSolicitudesPage = () => {
       if (error) throw error;
 
       setSolicitudes(prev => prev.map(sol => 
-        sol.id === id ? { ...sol, estado: 'rechazado' } : sol
+        sol.id === id ? { ...sol, estado: 'rechazado' } as SolicitudNegocio : sol
       ));
       
       toast({
@@ -134,7 +162,7 @@ const AdminSolicitudesPage = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setProcessingId(null);
     }
   };
 
@@ -172,82 +200,80 @@ const AdminSolicitudesPage = () => {
               <p className="text-gray-500">Cargando solicitudes...</p>
             </div>
           ) : (
-            <div className="rounded-md border">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="py-3 px-4 text-left">Negocio</th>
-                    <th className="py-3 px-4 text-left">Contacto</th>
-                    <th className="py-3 px-4 text-left">Fecha</th>
-                    <th className="py-3 px-4 text-left">Estado</th>
-                    <th className="py-3 px-4 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSolicitudes.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-6 text-center text-gray-500">
-                        No se encontraron solicitudes
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredSolicitudes.map((solicitud) => (
-                      <tr key={solicitud.id} className="border-b">
-                        <td className="py-3 px-4">{solicitud.nombre_negocio}</td>
-                        <td className="py-3 px-4">{solicitud.nombre_contacto}</td>
-                        <td className="py-3 px-4">
-                          {new Date(solicitud.creada_en).toLocaleDateString('es-ES')}
-                        </td>
-                        <td className="py-3 px-4">
-                          <Badge className={
-                            solicitud.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100' :
-                            solicitud.estado === 'aceptado' ? 'bg-green-100 text-green-800 hover:bg-green-100' :
-                            'bg-red-100 text-red-800 hover:bg-red-100'
-                          }>
-                            {solicitud.estado === 'pendiente' ? 'Pendiente' :
-                             solicitud.estado === 'aceptado' ? 'Aceptada' :
-                             'Rechazada'}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={() => handleViewDetails(solicitud)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            {solicitud.estado === 'pendiente' && (
-                              <>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                  onClick={() => handleAprobar(solicitud.id)}
-                                  disabled={loading}
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon"
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  onClick={() => handleRechazar(solicitud.id)}
-                                  disabled={loading}
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Negocio</TableHead>
+                  <TableHead>Contacto</TableHead>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredSolicitudes.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-6 text-center text-gray-500">
+                      No se encontraron solicitudes
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredSolicitudes.map((solicitud) => (
+                    <TableRow key={solicitud.id}>
+                      <TableCell>{solicitud.nombre_negocio}</TableCell>
+                      <TableCell>{solicitud.nombre_contacto}</TableCell>
+                      <TableCell>
+                        {new Date(solicitud.creada_en).toLocaleDateString('es-ES')}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={
+                          solicitud.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100' :
+                          solicitud.estado === 'aceptado' ? 'bg-green-100 text-green-800 hover:bg-green-100' :
+                          'bg-red-100 text-red-800 hover:bg-red-100'
+                        }>
+                          {solicitud.estado === 'pendiente' ? 'Pendiente' :
+                           solicitud.estado === 'aceptado' ? 'Aceptada' :
+                           'Rechazada'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleViewDetails(solicitud)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {solicitud.estado === 'pendiente' && (
+                            <>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                onClick={() => handleAprobar(solicitud.id)}
+                                disabled={loading || processingId !== null}
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleRechazar(solicitud.id)}
+                                disabled={loading || processingId !== null}
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -322,7 +348,7 @@ const AdminSolicitudesPage = () => {
                   variant="outline"
                   className="bg-red-50 hover:bg-red-100 text-red-600 border-red-200"
                   onClick={() => handleRechazar(selectedSolicitud.id)}
-                  disabled={loading}
+                  disabled={loading || processingId !== null}
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Rechazar
@@ -330,7 +356,7 @@ const AdminSolicitudesPage = () => {
                 <Button
                   className="bg-green-600 hover:bg-green-700"
                   onClick={() => handleAprobar(selectedSolicitud.id)}
-                  disabled={loading}
+                  disabled={loading || processingId !== null}
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Aprobar
@@ -343,6 +369,36 @@ const AdminSolicitudesPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de error detallado */}
+      <Sheet open={showError} onOpenChange={setShowError}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle className="text-red-600">Error al procesar solicitud</SheetTitle>
+            <SheetDescription>
+              Se encontró un error al procesar la solicitud. A continuación se muestran los detalles técnicos:
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-6">
+            <div className="bg-gray-100 p-4 rounded-md overflow-auto h-64">
+              <pre className="whitespace-pre-wrap text-sm">{errorDetails}</pre>
+            </div>
+            
+            <div className="mt-6 space-y-4">
+              <h4 className="font-medium">Posibles soluciones:</h4>
+              <ul className="list-disc pl-5 space-y-2">
+                <li>Verifica que las políticas de seguridad (RLS) en Supabase estén correctamente configuradas.</li>
+                <li>Asegúrate de que el usuario tenga permisos suficientes para realizar operaciones de inserción.</li>
+                <li>Comprueba que no haya restricciones de unicidad que impidan la operación.</li>
+              </ul>
+            </div>
+          </div>
+          <SheetFooter className="mt-6">
+            <Button onClick={() => setShowError(false)}>Cerrar</Button>
+            <Button variant="outline" onClick={fetchSolicitudes}>Recargar datos</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
