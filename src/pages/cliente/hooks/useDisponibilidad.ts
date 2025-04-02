@@ -52,11 +52,21 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         }
       } else {
         console.error('Error al cargar días disponibles:', diasDispResult.message);
+        toast({
+          title: "Error",
+          description: "No se pudo cargar la disponibilidad. Intenta más tarde.",
+          variant: "destructive"
+        });
         setDiasDisponibles([]);
         setDiasSeleccionablesMes(new Set());
       }
     } catch (error) {
       console.error('Error en cargarDiasDisponibles:', error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error al cargar la disponibilidad.",
+        variant: "destructive"
+      });
       setDiasDisponibles([]);
       setDiasSeleccionablesMes(new Set());
     } finally {
@@ -67,6 +77,8 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
   const handleMonthChange = useCallback((date: Date) => {
     const nuevoAnio = date.getFullYear();
     const nuevoMes = date.getMonth() + 1;
+    
+    console.log(`Month changed to: ${nuevoMes}/${nuevoAnio}`);
     
     // Solo actualizar si cambia el mes
     if (nuevoAnio !== mesActual.anio || nuevoMes !== mesActual.mes) {
@@ -79,6 +91,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
 
   useEffect(() => {
     if (negocioId) {
+      console.log(`Loading availability for business ID ${negocioId} for month ${mesActual.mes}/${mesActual.anio}`);
       setDiasSeleccionablesMes(new Set());
       cargarDiasDisponibles(mesActual.anio, mesActual.mes);
     }
@@ -86,13 +99,18 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
 
   useEffect(() => {
     const cargarHorasDisponibles = async () => {
-      if (!negocioId || !servicioId || !fecha) return;
+      if (!negocioId || !servicioId) {
+        console.log("Missing required data: negocioId or servicioId");
+        return;
+      }
       
       try {
         setCargandoHorarios(true);
         
         const fechaFormateada = format(fecha, 'yyyy-MM-dd');
-        const duracionMinutos = servicioId ? 30 : 30; // Default value if no service selected
+        
+        // Get the duration from the service or use a default
+        const duracionMinutos = servicioId ? 30 : 30; // Default duration
         
         console.log(`Obteniendo horarios para negocio: ${negocioId}, fecha: ${fechaFormateada}, duración: ${duracionMinutos}`);
         const result = await getHorariosDisponibles(
@@ -102,13 +120,10 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         );
         
         if (result.success && result.data) {
-          // Mostrar todos los horarios para depuración
           console.log('Horarios recibidos:', result.data);
           
-          // Filtrar solo los horarios disponibles
-          const horariosDisp = Array.isArray(result.data) 
-            ? result.data
-            : [];
+          // Ensure we have an array of time slots
+          const horariosDisp = Array.isArray(result.data) ? result.data : [];
             
           setHorasDisponibles(horariosDisp);
           
@@ -116,7 +131,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
           
           console.log(`Se encontraron ${horariosDisponibles.length} horarios disponibles de ${horariosDisp.length} totales`);
           
-          if (horariosDisponibles.length === 0) {
+          if (horariosDisponibles.length === 0 && horariosDisp.length > 0) {
             toast({
               title: "Información",
               description: "No hay horarios disponibles para la fecha seleccionada.",
@@ -124,17 +139,29 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
           }
         } else {
           console.error('Error al cargar horas disponibles:', result.message);
+          toast({
+            title: "Error",
+            description: "No se pudo cargar los horarios disponibles.",
+            variant: "destructive"
+          });
           setHorasDisponibles([]);
         }
       } catch (error) {
         console.error('Error al cargar horas disponibles:', error);
+        toast({
+          title: "Error",
+          description: "Ocurrió un error al cargar los horarios.",
+          variant: "destructive"
+        });
         setHorasDisponibles([]);
       } finally {
         setCargandoHorarios(false);
       }
     };
     
-    cargarHorasDisponibles();
+    if (negocioId && servicioId && fecha) {
+      cargarHorasDisponibles();
+    }
   }, [negocioId, servicioId, fecha, toast]);
 
   return {

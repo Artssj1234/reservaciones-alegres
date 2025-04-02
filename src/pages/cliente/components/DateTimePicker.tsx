@@ -47,6 +47,7 @@ const DateTimePicker = ({
     diasSeleccionablesCount: diasSeleccionablesMes.size,
     diasDisponibles: Array.from(diasSeleccionablesMes),
     horasDisponiblesCount: horasDisponibles.length,
+    horasDisponiblesValues: horasDisponibles,
     currentDayOfWeek: format(date, 'EEEE', { locale: es }),
   });
 
@@ -155,17 +156,26 @@ const DateTimePicker = ({
             ) : (
               <div className="border rounded-md p-4 h-72 overflow-y-auto">
                 <div className="grid grid-cols-2 gap-2">
-                  {horasDisponibles.filter(hora => hora.disponible).map((hora, index) => (
+                  {horasDisponibles.map((hora, index) => (
                     <div
                       key={index}
                       className={`p-2 border rounded text-center cursor-pointer transition-colors ${
-                        selectedTime === hora.hora_inicio
-                          ? 'border-blue-600 bg-blue-50 font-medium'
-                          : 'hover:border-gray-400'
+                        !hora.disponible ? 
+                          'bg-gray-100 text-gray-400 cursor-not-allowed' : 
+                          selectedTime === hora.hora_inicio
+                            ? 'border-blue-600 bg-blue-50 font-medium'
+                            : 'hover:border-gray-400'
                       }`}
-                      onClick={() => onTimeChange(hora.hora_inicio)}
+                      onClick={() => {
+                        if (hora.disponible) {
+                          onTimeChange(hora.hora_inicio);
+                        }
+                      }}
                     >
                       {hora.hora_inicio}
+                      {!hora.disponible && (
+                        <span className="block text-xs mt-1">No disponible</span>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useNegocio } from './hooks/useNegocio';
@@ -47,6 +47,21 @@ const CitaPublicaPage = () => {
     cargandoHorarios,
     handleMonthChange
   } = useDisponibilidad(negocio?.id, formData.servicio_id, formData.fecha);
+
+  // Debug logs - very useful for monitoring the state
+  useEffect(() => {
+    if (negocio) {
+      console.log("CitaPublicaPage loaded with data:", {
+        negocioId: negocio.id,
+        serviciosCount: servicios.length,
+        step,
+        servicio_id: formData.servicio_id,
+        fecha: formData.fecha,
+        horasDisponiblesCount: horasDisponibles.length,
+        diasSeleccionablesCount: diasSeleccionablesMes.size
+      });
+    }
+  }, [negocio, servicios, step, formData, horasDisponibles, diasSeleccionablesMes]);
 
   if (isLoadingNegocio && !negocio) {
     return <LoadingIndicator message="Cargando información del negocio..." />;
