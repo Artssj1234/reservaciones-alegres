@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { Search, Calendar, Clock } from 'lucide-react';
+import { Search, Calendar, Clock, ChevronLeft } from 'lucide-react';
 import { getCitaByTelefono } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -177,6 +178,17 @@ const VerificarCitaPage = () => {
                 </Card>
               );
             })}
+          </div>
+          
+          <div className="flex justify-center mt-8">
+            <Button 
+              variant="outline" 
+              className="flex items-center"
+              onClick={() => navigate('/')}
+            >
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Volver al inicio
+            </Button>
           </div>
         </div>
       )}
