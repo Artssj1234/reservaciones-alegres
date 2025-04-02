@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { getDiasDisponibles, getHorariosDisponibles } from '@/integrations/supabase/client';
@@ -11,47 +10,45 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
   const [diasSeleccionablesMes, setDiasSeleccionablesMes] = useState<Set<string>>(new Set());
   const [cargandoHorarios, setCargandoHorarios] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [mesActual, setMesActual] = useState<{anio: number, mes: number}>({
-    anio: new Date().getFullYear(),
-    mes: new Date().getMonth() + 1
-  });
+  const [mesActual, setMesActual] = useState<{anio: number, mes: number}>(
+    {
+      anio: new Date().getFullYear(),
+      mes: new Date().getMonth() + 1
+    }
+  );
   const { toast } = useToast();
 
   const cargarDiasDisponibles = useCallback(async (anio: number, mes: number) => {
     if (!negocioId) return;
-    
+
     try {
       console.log(`Obteniendo días disponibles para negocio ID: ${negocioId} en año: ${anio}, mes: ${mes}, servicio: ${servicioId}`);
       setIsLoading(true);
-      
-      // Solo enviar servicioId si tiene un valor válido
+
       const servicioIdParaEnviar = servicioId && servicioId.trim() !== '' ? servicioId : undefined;
-      
+
       const diasDispResult = await getDiasDisponibles(
-        negocioId, 
-        anio, 
-        mes, 
+        negocioId,
+        anio,
+        mes,
         servicioIdParaEnviar
       );
-      
+
       if (diasDispResult.success && diasDispResult.data) {
         const dias = diasDispResult.data;
         setDiasDisponibles(dias);
-        
-        // Marcar como seleccionable cualquier día que tenga disponibilidad
+
         const fechasDisponibles = new Set<string>();
         dias.forEach(dia => {
           if (dia.tiene_disponibilidad || dia.estado === 'disponible' || dia.estado === 'parcialmente_bloqueado') {
             fechasDisponibles.add(format(new Date(dia.fecha), 'yyyy-MM-dd'));
           }
         });
-        
-        console.log(`Fechas disponibles encontradas: ${fechasDisponibles.size}`, 
-          Array.from(fechasDisponibles).join(', '));
-          
+
+        console.log(`Fechas disponibles encontradas: ${fechasDisponibles.size}`, Array.from(fechasDisponibles).join(', '));
+
         setDiasSeleccionablesMes(fechasDisponibles);
-        
-        // Si no hay días disponibles, mostrar mensaje
+
         if (fechasDisponibles.size === 0) {
           toast({
             title: "Información",
@@ -86,19 +83,14 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
   const handleMonthChange = useCallback((date: Date) => {
     const nuevoAnio = date.getFullYear();
     const nuevoMes = date.getMonth() + 1;
-    
+
     console.log(`Month changed to: ${nuevoMes}/${nuevoAnio}`);
-    
-    // Solo actualizar si cambia el mes
+
     if (nuevoAnio !== mesActual.anio || nuevoMes !== mesActual.mes) {
-      setMesActual({
-        anio: nuevoAnio,
-        mes: nuevoMes
-      });
+      setMesActual({ anio: nuevoAnio, mes: nuevoMes });
     }
   }, [mesActual]);
 
-  // Load available days when month or business changes
   useEffect(() => {
     if (negocioId) {
       console.log(`Loading availability for business ID ${negocioId} for month ${mesActual.mes}/${mesActual.anio}`);
@@ -107,7 +99,6 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
     }
   }, [negocioId, mesActual, cargarDiasDisponibles]);
 
-  // Load available time slots when date or service changes
   useEffect(() => {
     const cargarHorasDisponibles = async () => {
       if (!negocioId || !fecha) {
@@ -115,37 +106,37 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         setHorasDisponibles([]);
         return;
       }
-      
+
       try {
         console.log(`Loading time slots for date: ${format(fecha, 'yyyy-MM-dd')}`);
         setCargandoHorarios(true);
-        
+
         const fechaFormateada = format(fecha, 'yyyy-MM-dd');
-        
-        // Pasamos servicioId solo si realmente tiene un valor
         const servicioIdParaEnviar = servicioId && servicioId.trim() !== '' ? servicioId : undefined;
-        
-        console.log(`Obteniendo horarios para negocio: ${negocioId}, fecha: ${fechaFormateada}, servicio: ${servicioIdParaEnviar || 'no seleccionado'}`);
+
+        if (!servicioIdParaEnviar) {
+          setHorasDisponibles([]);
+          setCargandoHorarios(false);
+          return;
+        }
+
+        console.log(`Obteniendo horarios para negocio: ${negocioId}, fecha: ${fechaFormateada}, servicio: ${servicioIdParaEnviar}`);
         const result = await getHorariosDisponibles(
           negocioId,
           fechaFormateada,
-          0,  // Enviar 0 como duración porque ahora pasamos el servicio_id
+          undefined, // ya no enviamos duracion_minutos manualmente
           servicioIdParaEnviar
         );
-        
+
         if (result.success && result.data) {
           console.log('Horarios recibidos:', result.data);
-          
-          // Ensure we have an array of time slots
           const horariosDisp = Array.isArray(result.data) ? result.data : [];
-            
-          // Store all time slots including unavailable ones
           setHorasDisponibles(horariosDisp);
-          
+
           const horariosDisponibles = horariosDisp.filter(h => h.disponible);
-          
+
           console.log(`Se encontraron ${horariosDisponibles.length} horarios disponibles de ${horariosDisp.length} totales`);
-          
+
           if (horariosDisponibles.length === 0 && horariosDisp.length > 0) {
             toast({
               title: "Información",
@@ -173,7 +164,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         setCargandoHorarios(false);
       }
     };
-    
+
     if (negocioId && fecha) {
       cargarHorasDisponibles();
     } else {
