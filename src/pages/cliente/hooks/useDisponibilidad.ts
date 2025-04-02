@@ -24,12 +24,14 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
       console.log(`Obteniendo días disponibles para negocio ID: ${negocioId} en año: ${anio}, mes: ${mes}, servicio: ${servicioId}`);
       setIsLoading(true);
       
-      // Podemos pasar servicioId como null si está vacío
+      // Pasamos servicioId solo si realmente tiene un valor
+      const servicioIdParaEnviar = servicioId && servicioId.trim() !== '' ? servicioId : undefined;
+      
       const diasDispResult = await getDiasDisponibles(
         negocioId, 
         anio, 
         mes, 
-        servicioId || undefined // Usar undefined si está vacío para que el API lo maneje como parámetro opcional
+        servicioIdParaEnviar
       );
       
       if (diasDispResult.success && diasDispResult.data) {
@@ -108,8 +110,8 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
   // Load available time slots when date or service changes
   useEffect(() => {
     const cargarHorasDisponibles = async () => {
-      if (!negocioId || !servicioId) {
-        console.log("Missing required data: negocioId or servicioId");
+      if (!negocioId || !fecha) {
+        console.log("Missing required data: negocioId or fecha");
         setHorasDisponibles([]);
         return;
       }
@@ -120,13 +122,15 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         
         const fechaFormateada = format(fecha, 'yyyy-MM-dd');
         
-        // Get the selected service to pass its ID
-        console.log(`Obteniendo horarios para negocio: ${negocioId}, fecha: ${fechaFormateada}, servicio: ${servicioId}`);
+        // Pasamos servicioId solo si realmente tiene un valor
+        const servicioIdParaEnviar = servicioId && servicioId.trim() !== '' ? servicioId : undefined;
+        
+        console.log(`Obteniendo horarios para negocio: ${negocioId}, fecha: ${fechaFormateada}, servicio: ${servicioIdParaEnviar || 'no seleccionado'}`);
         const result = await getHorariosDisponibles(
           negocioId,
           fechaFormateada,
           0,  // Enviar 0 como duración porque ahora pasamos el servicio_id
-          servicioId // Pasamos el ID del servicio para que la función obtenga su duración
+          servicioIdParaEnviar
         );
         
         if (result.success && result.data) {
@@ -170,12 +174,27 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
       }
     };
     
-    if (negocioId && servicioId && fecha) {
+    if (negocioId && fecha) {
       cargarHorasDisponibles();
     } else {
       setHorasDisponibles([]);
     }
   }, [negocioId, servicioId, fecha, toast]);
+
+  const handleMonthChange = useCallback((date: Date) => {
+    const nuevoAnio = date.getFullYear();
+    const nuevoMes = date.getMonth() + 1;
+    
+    console.log(`Month changed to: ${nuevoMes}/${nuevoAnio}`);
+    
+    // Solo actualizar si cambia el mes
+    if (nuevoAnio !== mesActual.anio || nuevoMes !== mesActual.mes) {
+      setMesActual({
+        anio: nuevoAnio,
+        mes: nuevoMes
+      });
+    }
+  }, [mesActual]);
 
   return {
     horasDisponibles,

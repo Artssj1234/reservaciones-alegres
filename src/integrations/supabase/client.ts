@@ -531,8 +531,8 @@ export const getDiasDisponibles = async (negocioId: string, anio: number, mes: n
       p_mes: mes
     };
     
-    // Añadir el servicio_id solo si está definido
-    if (servicioId) {
+    // Añadir el servicio_id solo si está definido y no es una cadena vacía
+    if (servicioId && servicioId.trim() !== '') {
       params.p_servicio_id = servicioId;
     }
     
