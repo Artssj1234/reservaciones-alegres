@@ -39,8 +39,12 @@ export const customLogin = async (usuario: string, contrasena: string): Promise<
     return { success: false, message: error.message };
   }
   
-  // Ensure that data is properly typed as LoginResponse
-  return (data as LoginResponse) || { success: false, message: 'Error desconocido' };
+  // Properly handle the JSON response by checking its structure
+  if (typeof data === 'object' && data !== null && 'success' in data) {
+    return data as LoginResponse;
+  }
+  
+  return { success: false, message: 'Error desconocido: formato de respuesta inválido' };
 };
 
 // Get business data for a user
@@ -54,6 +58,10 @@ export const getBusinessByUserId = async (userId: string): Promise<BusinessRespo
     return { success: false, message: error.message };
   }
   
-  // Ensure that data is properly typed as BusinessResponse
-  return (data as BusinessResponse) || { success: false, message: 'Error desconocido' };
+  // Properly handle the JSON response by checking its structure
+  if (typeof data === 'object' && data !== null && 'success' in data) {
+    return data as BusinessResponse;
+  }
+  
+  return { success: false, message: 'Error desconocido: formato de respuesta inválido' };
 };
