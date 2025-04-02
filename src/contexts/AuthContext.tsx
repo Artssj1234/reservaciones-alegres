@@ -56,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      const usuarioAutenticado: Usuario = data;
+      const usuarioAutenticado: Usuario = data as Usuario;
 
       let negocioData: Negocio | null = null;
 
@@ -71,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (negocioError) {
           console.error('Error al obtener datos del negocio:', negocioError);
         } else if (negocioResult) {
-          negocioData = negocioResult;
+          negocioData = negocioResult as Negocio;
         }
       }
 
