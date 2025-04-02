@@ -205,9 +205,16 @@ function useToastContext(): ToastContextType {
   return context
 }
 
+// Create a toast function that can be imported directly
+const toast = ({ ...props }: Omit<ToasterToast, "id">) => {
+  const { toast: toastFunc } = useToast()
+  return toastFunc(props)
+}
+
 export {
   type ToasterToast,
   ToastProvider,
   useToast,
   useToastContext,
+  toast,
 }
