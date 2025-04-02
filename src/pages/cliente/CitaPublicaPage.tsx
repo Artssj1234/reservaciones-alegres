@@ -22,7 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from '@/components/ui/use-toast';
-import { CalendarRange, Clock, CheckCircle2, ChevronRight } from 'lucide-react';
+import { CalendarRange, Clock, CheckCircle2, ChevronRight, Info, Scissors } from 'lucide-react';
 import { 
   getNegocioBySlug,
   getServiciosByNegocioId,
@@ -55,6 +55,8 @@ const CitaPublicaPage = () => {
   const [telefono, setTelefono] = useState('');
   const [citasEncontradas, setCitasEncontradas] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [cargandoHorarios, setCargandoHorarios] = useState(false);
+  const [diasSeleccionablesMes, setDiasSeleccionablesMes] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   
   const hoy = new Date();
@@ -93,23 +95,30 @@ const CitaPublicaPage = () => {
         const serviciosResult = await getServiciosByNegocioId(negocioResult.data.id);
         
         if (serviciosResult.success) {
-          setServicios(serviciosResult.data.filter((s: any) => s.activo));
+          const serviciosActivos = serviciosResult.data.filter((s: any) => s.activo);
+          setServicios(serviciosActivos);
+          
+          // Si no hay servicios, mostrar mensaje
+          if (serviciosActivos.length === 0) {
+            toast({
+              title: "Información",
+              description: "Este negocio aún no tiene servicios disponibles para reserva.",
+            });
+          }
         } else {
           console.error('Error al cargar servicios:', serviciosResult.message);
+          toast({
+            title: "Error",
+            description: "Ocurrió un error al cargar los servicios.",
+            variant: "destructive",
+          });
         }
         
         // Cargar días disponibles para el mes actual
         const anioActual = hoy.getFullYear();
         const mesActual = hoy.getMonth() + 1;
         
-        const diasDispResult = await getDiasDisponibles(negocioResult.data.id, anioActual, mesActual);
-        
-        if (diasDispResult.success && diasDispResult.data) {
-          setDiasDisponibles(diasDispResult.data);
-        } else {
-          console.error('Error al cargar días disponibles:', diasDispResult.message);
-          setDiasDisponibles([]);
-        }
+        await cargarDiasDisponibles(negocioResult.data.id, anioActual, mesActual);
         
       } catch (error) {
         console.error('Error al cargar datos:', error);
@@ -126,11 +135,46 @@ const CitaPublicaPage = () => {
     cargarDatos();
   }, [slug, toast, hoy]);
   
+  const cargarDiasDisponibles = async (negocioId: string, anio: number, mes: number) => {
+    try {
+      const diasDispResult = await getDiasDisponibles(negocioId, anio, mes);
+      
+      if (diasDispResult.success && diasDispResult.data) {
+        const dias = diasDispResult.data;
+        setDiasDisponibles(dias);
+        
+        // Crear un Set con las fechas que tienen disponibilidad para facilitar la búsqueda
+        const fechasDisponibles = new Set<string>();
+        dias.forEach(dia => {
+          if (dia.tiene_disponibilidad) {
+            fechasDisponibles.add(format(new Date(dia.fecha), 'yyyy-MM-dd'));
+          }
+        });
+        setDiasSeleccionablesMes(fechasDisponibles);
+        
+        // Si no hay días disponibles, mostrar mensaje
+        if (fechasDisponibles.size === 0) {
+          toast({
+            title: "Información",
+            description: "No hay horarios disponibles para este mes.",
+          });
+        }
+      } else {
+        console.error('Error al cargar días disponibles:', diasDispResult.message);
+        setDiasDisponibles([]);
+      }
+    } catch (error) {
+      console.error('Error en cargarDiasDisponibles:', error);
+      setDiasDisponibles([]);
+    }
+  };
+  
   useEffect(() => {
     const cargarHorasDisponibles = async () => {
       if (!negocio?.id || !formData.servicio_id || !formData.fecha) return;
       
       try {
+        setCargandoHorarios(true);
         const servicio = servicios.find(s => s.id === formData.servicio_id);
         
         if (!servicio) return;
@@ -144,7 +188,19 @@ const CitaPublicaPage = () => {
         );
         
         if (result.success && result.data) {
-          setHorasDisponibles(result.data.filter(h => h.disponible));
+          // Filtrar solo los horarios disponibles
+          const horariosDisp = Array.isArray(result.data) 
+            ? result.data.filter(h => h.disponible) 
+            : [];
+            
+          setHorasDisponibles(horariosDisp);
+          
+          if (horariosDisp.length === 0) {
+            toast({
+              title: "Información",
+              description: "No hay horarios disponibles para la fecha seleccionada.",
+            });
+          }
         } else {
           console.error('Error al cargar horas disponibles:', result.message);
           setHorasDisponibles([]);
@@ -152,11 +208,13 @@ const CitaPublicaPage = () => {
       } catch (error) {
         console.error('Error al cargar horas disponibles:', error);
         setHorasDisponibles([]);
+      } finally {
+        setCargandoHorarios(false);
       }
     };
     
     cargarHorasDisponibles();
-  }, [formData.servicio_id, formData.fecha, negocio?.id, servicios]);
+  }, [formData.servicio_id, formData.fecha, negocio?.id, servicios, toast]);
 
   const handleServicioChange = (servicioId: string) => {
     setFormData(prev => ({
@@ -289,7 +347,7 @@ const CitaPublicaPage = () => {
     try {
       const result = await getCitaByTelefono(telefono.trim());
       
-      if (result.success && result.data.length > 0) {
+      if (result.success && result.data && result.data.length > 0) {
         setCitasEncontradas(result.data);
       } else {
         setCitasEncontradas([]);
@@ -314,6 +372,11 @@ const CitaPublicaPage = () => {
     } catch (e) {
       return fechaStr;
     }
+  };
+
+  const esDiaDisponible = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return diasSeleccionablesMes.has(dateStr);
   };
 
   if (isLoading) {
@@ -455,7 +518,9 @@ const CitaPublicaPage = () => {
               <div className="space-y-4">
                 {servicios.length === 0 ? (
                   <div className="text-center py-8">
+                    <Scissors className="mx-auto h-12 w-12 text-gray-300 mb-3" />
                     <p className="text-gray-500">No hay servicios disponibles en este momento.</p>
+                    <p className="text-sm text-gray-400 mt-2">Contacta directamente con el negocio para más información.</p>
                   </div>
                 ) : (
                   servicios.map(servicio => (
@@ -496,71 +561,85 @@ const CitaPublicaPage = () => {
             <div className="space-y-6">
               <h2 className="text-xl font-medium text-center">Selecciona fecha y hora</h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="mb-2 block">Fecha</Label>
-                  <div className="border rounded-md p-3">
-                    <Calendar
-                      mode="single"
-                      selected={formData.fecha}
-                      onSelect={handleFechaChange}
-                      disabled={(date) => {
-                        // Deshabilitar fechas pasadas y más de 2 meses en el futuro
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        
-                        if (isBefore(date, today) || isAfter(date, limiteMaximo)) {
-                          return true;
-                        }
-                        
-                        // Verificar disponibilidad según los días disponibles
-                        const dateStr = format(date, 'yyyy-MM-dd');
-                        const diaDisponible = diasDisponibles.find(d => d.fecha === dateStr);
-                        
-                        // Si no hay información o no está disponible, deshabilitar
-                        return diaDisponible ? !diaDisponible.tiene_disponibilidad : true;
-                      }}
-                    />
+              {diasSeleccionablesMes.size === 0 && (
+                <div className="text-center p-6 bg-gray-50 rounded-lg">
+                  <Info className="mx-auto h-10 w-10 text-blue-500 mb-3" />
+                  <p className="text-gray-700">Este negocio no tiene horarios disponibles configurados.</p>
+                  <p className="text-sm text-gray-500 mt-1">Por favor, contacta directamente con el negocio.</p>
+                </div>
+              )}
+              
+              {diasSeleccionablesMes.size > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="mb-2 block">Fecha</Label>
+                    <div className="border rounded-md p-3">
+                      <Calendar
+                        mode="single"
+                        selected={formData.fecha}
+                        onSelect={handleFechaChange}
+                        disabled={(date) => {
+                          // Deshabilitar fechas pasadas y más de 2 meses en el futuro
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          
+                          if (isBefore(date, today) || isAfter(date, limiteMaximo)) {
+                            return true;
+                          }
+                          
+                          // Verificar disponibilidad según los días disponibles
+                          return !esDiaDisponible(date);
+                        }}
+                        locale={es}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label className="mb-2 block">Hora Disponible</Label>
+                    {cargandoHorarios ? (
+                      <div className="border rounded-md p-4 h-full flex items-center justify-center">
+                        <p className="text-gray-500">Cargando horarios disponibles...</p>
+                      </div>
+                    ) : horasDisponibles.length === 0 ? (
+                      <div className="border rounded-md p-4 bg-gray-50 h-full flex items-center justify-center">
+                        <p className="text-gray-500 text-center">
+                          {!formData.servicio_id 
+                            ? "Por favor, selecciona un servicio primero" 
+                            : "No hay horas disponibles para la fecha seleccionada"}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="border rounded-md p-4 h-72 overflow-y-auto">
+                        <div className="grid grid-cols-2 gap-2">
+                          {horasDisponibles.map((hora, index) => (
+                            <div
+                              key={index}
+                              className={`p-2 border rounded text-center cursor-pointer transition-colors ${
+                                formData.hora_inicio === hora.hora_inicio
+                                  ? 'border-blue-600 bg-blue-50'
+                                  : 'hover:border-gray-400'
+                              }`}
+                              onClick={() => handleHoraChange(hora.hora_inicio)}
+                            >
+                              {hora.hora_inicio}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                
-                <div>
-                  <Label className="mb-2 block">Hora Disponible</Label>
-                  {horasDisponibles.length === 0 ? (
-                    <div className="border rounded-md p-4 bg-gray-50 h-full flex items-center justify-center">
-                      <p className="text-gray-500 text-center">
-                        {!formData.servicio_id 
-                          ? "Por favor, selecciona un servicio primero" 
-                          : "No hay horas disponibles para la fecha seleccionada"}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="border rounded-md p-4 h-72 overflow-y-auto">
-                      <div className="grid grid-cols-2 gap-2">
-                        {horasDisponibles.map((hora, index) => (
-                          <div
-                            key={index}
-                            className={`p-2 border rounded text-center cursor-pointer transition-colors ${
-                              formData.hora_inicio === hora.hora_inicio
-                                ? 'border-blue-600 bg-blue-50'
-                                : 'hover:border-gray-400'
-                            }`}
-                            onClick={() => handleHoraChange(hora.hora_inicio)}
-                          >
-                            {hora.hora_inicio}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              )}
               
               <div className="flex justify-between">
                 <Button variant="outline" onClick={handleBack}>
                   Atrás
                 </Button>
-                <Button onClick={handleNext} disabled={!formData.hora_inicio}>
+                <Button 
+                  onClick={handleNext} 
+                  disabled={!formData.hora_inicio || diasSeleccionablesMes.size === 0}
+                >
                   Siguiente
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
