@@ -6,7 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 const RegistroPage = () => {
   const [formData, setFormData] = useState({
@@ -21,6 +22,7 @@ const RegistroPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -48,20 +50,36 @@ const RegistroPage = () => {
     setIsLoading(true);
     
     try {
-      // En producción, esto enviaría los datos a Supabase
-      // Simulamos un delay para mostrar el loading state
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      // Enviar datos a Supabase
+      const { data, error } = await supabase
+        .from('solicitudes_negocio')
+        .insert([
+          {
+            nombre_negocio: formData.nombre_negocio,
+            nombre_contacto: formData.nombre_contacto,
+            telefono: formData.telefono,
+            correo: formData.correo,
+            slug: formData.slug,
+            mensaje_opcional: formData.mensaje_opcional,
+            estado: 'pendiente'
+          }
+        ])
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
       toast({
         title: "Solicitud enviada",
         description: "Hemos recibido tu solicitud. Te contactaremos pronto.",
       });
       
       setSuccess(true);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Ha ocurrido un error. Inténtalo de nuevo.",
+        description: error.message || "Ha ocurrido un error. Inténtalo de nuevo.",
         variant: "destructive",
       });
       console.error("Error de registro:", error);
@@ -202,7 +220,7 @@ const RegistroPage = () => {
           </CardContent>
           <CardFooter className="flex justify-center">
             <p className="text-sm text-gray-500">
-              ¿Ya tienes una cuenta? <Link to="/login" className="text-reserva-primary hover:underline">Inicia sesión</Link>
+              ¿Ya tienes una cuenta? <Link to="/login" className="text-indigo-600 hover:underline">Inicia sesión</Link>
             </p>
           </CardFooter>
         </Card>

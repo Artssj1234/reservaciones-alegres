@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,72 +7,44 @@ import { useToast } from '@/components/ui/use-toast';
 import { Input } from '@/components/ui/input';
 import { Search, CheckCircle, XCircle, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-
-// Mock data
-const mockSolicitudes = [
-  { 
-    id: '1', 
-    nombre_negocio: 'Peluquería Moderna', 
-    nombre_contacto: 'Ana López',
-    telefono: '+34612345678',
-    correo: 'ana@peluqueriamoderna.com',
-    slug: 'peluqueria-moderna',
-    estado: 'pendiente',
-    mensaje_opcional: 'Ofrecemos servicios de peluquería unisex con las últimas tendencias',
-    creada_en: '2023-06-15T10:30:00'
-  },
-  { 
-    id: '2', 
-    nombre_negocio: 'Salón de Belleza María', 
-    nombre_contacto: 'María Gómez',
-    telefono: '+34623456789',
-    correo: 'maria@salonbelleza.com',
-    slug: 'salon-maria',
-    estado: 'pendiente',
-    mensaje_opcional: 'Especialistas en tratamientos faciales y corporales',
-    creada_en: '2023-06-14T14:15:00'
-  },
-  { 
-    id: '3', 
-    nombre_negocio: 'Barbería Clásica', 
-    nombre_contacto: 'Carlos Ruiz',
-    telefono: '+34634567890',
-    correo: 'carlos@barberiaclasica.com',
-    slug: 'barberia-clasica',
-    estado: 'pendiente',
-    mensaje_opcional: 'Barbería tradicional con toque moderno',
-    creada_en: '2023-06-13T09:45:00'
-  },
-  { 
-    id: '4', 
-    nombre_negocio: 'Centro de Estética Bella', 
-    nombre_contacto: 'Laura Martínez',
-    telefono: '+34645678901',
-    correo: 'laura@centrobella.com',
-    slug: 'centro-bella',
-    estado: 'aceptado',
-    mensaje_opcional: 'Tratamientos de belleza para rostro y cuerpo',
-    creada_en: '2023-06-12T16:20:00'
-  },
-  { 
-    id: '5', 
-    nombre_negocio: 'Nails & Beauty', 
-    nombre_contacto: 'Sofía García',
-    telefono: '+34656789012',
-    correo: 'sofia@nailsbeauty.com',
-    slug: 'nails-beauty',
-    estado: 'rechazado',
-    mensaje_opcional: 'Especialistas en uñas acrílicas, gel y semipermanente',
-    creada_en: '2023-06-11T11:10:00'
-  }
-];
+import { supabase } from '@/integrations/supabase/client';
+import { SolicitudNegocio } from '@/types';
 
 const AdminSolicitudesPage = () => {
-  const [solicitudes, setSolicitudes] = useState(mockSolicitudes);
+  const [solicitudes, setSolicitudes] = useState<SolicitudNegocio[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSolicitud, setSelectedSolicitud] = useState<any>(null);
+  const [selectedSolicitud, setSelectedSolicitud] = useState<SolicitudNegocio | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchSolicitudes();
+  }, []);
+
+  const fetchSolicitudes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('solicitudes_negocio')
+        .select('*')
+        .order('creada_en', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      setSolicitudes(data as SolicitudNegocio[]);
+      setLoading(false);
+    } catch (error: any) {
+      console.error('Error al cargar solicitudes:', error.message);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar las solicitudes. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+      setLoading(false);
+    }
+  };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -85,31 +57,117 @@ const AdminSolicitudesPage = () => {
     sol.slug.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleViewDetails = (solicitud: any) => {
+  const handleViewDetails = (solicitud: SolicitudNegocio) => {
     setSelectedSolicitud(solicitud);
     setDetailsOpen(true);
   };
 
-  const handleAprobar = (id: string) => {
-    setSolicitudes(prev => prev.map(sol => 
-      sol.id === id ? { ...sol, estado: 'aceptado' } : sol
-    ));
-    toast({
-      title: "Solicitud aprobada",
-      description: "La solicitud ha sido aprobada exitosamente.",
-    });
-    setDetailsOpen(false);
+  const handleAprobar = async (id: string) => {
+    setLoading(true);
+    try {
+      // 1. Actualizar estado de la solicitud
+      const { error: updateError } = await supabase
+        .from('solicitudes_negocio')
+        .update({ estado: 'aceptado' })
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+
+      // 2. Obtener datos de la solicitud
+      const { data: solicitudData, error: solicitudError } = await supabase
+        .from('solicitudes_negocio')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (solicitudError || !solicitudData) throw solicitudError || new Error('No se encontró la solicitud');
+
+      // 3. Crear usuario para el negocio
+      const username = solicitudData.correo.split('@')[0] + Math.floor(Math.random() * 1000);
+      const password = Math.random().toString(36).slice(-8);
+
+      const { data: userData, error: userError } = await supabase
+        .from('usuarios')
+        .insert([
+          {
+            rol: 'negocio',
+            usuario: username,
+            contrasena: password
+          }
+        ])
+        .select()
+        .single();
+
+      if (userError || !userData) throw userError || new Error('Error al crear usuario');
+
+      // 4. Crear negocio asociado al usuario
+      const { error: negocioError } = await supabase
+        .from('negocios')
+        .insert([
+          {
+            nombre: solicitudData.nombre_negocio,
+            slug: solicitudData.slug,
+            usuario_id: userData.id
+          }
+        ]);
+
+      if (negocioError) throw negocioError;
+
+      // TODO: En un sistema real, aquí enviaríamos un email al negocio con sus credenciales
+
+      // 5. Actualizar interfaz
+      setSolicitudes(prev => prev.map(sol => 
+        sol.id === id ? { ...sol, estado: 'aceptado' } : sol
+      ));
+
+      toast({
+        title: "Solicitud aprobada",
+        description: `La solicitud ha sido aprobada exitosamente. Credenciales: ${username} / ${password}`,
+      });
+      
+      setDetailsOpen(false);
+    } catch (error: any) {
+      console.error('Error al aprobar solicitud:', error);
+      toast({
+        title: "Error al aprobar",
+        description: error.message || "No se pudo aprobar la solicitud. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRechazar = (id: string) => {
-    setSolicitudes(prev => prev.map(sol => 
-      sol.id === id ? { ...sol, estado: 'rechazado' } : sol
-    ));
-    toast({
-      title: "Solicitud rechazada",
-      description: "La solicitud ha sido rechazada.",
-    });
-    setDetailsOpen(false);
+  const handleRechazar = async (id: string) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('solicitudes_negocio')
+        .update({ estado: 'rechazado' })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setSolicitudes(prev => prev.map(sol => 
+        sol.id === id ? { ...sol, estado: 'rechazado' } : sol
+      ));
+      
+      toast({
+        title: "Solicitud rechazada",
+        description: "La solicitud ha sido rechazada.",
+      });
+      
+      setDetailsOpen(false);
+    } catch (error: any) {
+      console.error('Error al rechazar solicitud:', error);
+      toast({
+        title: "Error al rechazar",
+        description: error.message || "No se pudo rechazar la solicitud. Inténtalo de nuevo.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -140,80 +198,89 @@ const AdminSolicitudesPage = () => {
           <CardTitle>Todas las solicitudes</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="py-3 px-4 text-left">Negocio</th>
-                  <th className="py-3 px-4 text-left">Contacto</th>
-                  <th className="py-3 px-4 text-left">Fecha</th>
-                  <th className="py-3 px-4 text-left">Estado</th>
-                  <th className="py-3 px-4 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSolicitudes.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-6 text-center text-gray-500">
-                      No se encontraron solicitudes
-                    </td>
+          {loading ? (
+            <div className="py-10 text-center">
+              <div className="inline-block animate-spin rounded-full border-4 border-indigo-600 border-t-transparent h-12 w-12 mb-4"></div>
+              <p className="text-gray-500">Cargando solicitudes...</p>
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="py-3 px-4 text-left">Negocio</th>
+                    <th className="py-3 px-4 text-left">Contacto</th>
+                    <th className="py-3 px-4 text-left">Fecha</th>
+                    <th className="py-3 px-4 text-left">Estado</th>
+                    <th className="py-3 px-4 text-right">Acciones</th>
                   </tr>
-                ) : (
-                  filteredSolicitudes.map((solicitud) => (
-                    <tr key={solicitud.id} className="border-b">
-                      <td className="py-3 px-4">{solicitud.nombre_negocio}</td>
-                      <td className="py-3 px-4">{solicitud.nombre_contacto}</td>
-                      <td className="py-3 px-4">
-                        {new Date(solicitud.creada_en).toLocaleDateString('es-ES')}
-                      </td>
-                      <td className="py-3 px-4">
-                        <Badge className={
-                          solicitud.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100' :
-                          solicitud.estado === 'aceptado' ? 'bg-green-100 text-green-800 hover:bg-green-100' :
-                          'bg-red-100 text-red-800 hover:bg-red-100'
-                        }>
-                          {solicitud.estado === 'pendiente' ? 'Pendiente' :
-                           solicitud.estado === 'aceptado' ? 'Aceptada' :
-                           'Rechazada'}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => handleViewDetails(solicitud)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {solicitud.estado === 'pendiente' && (
-                            <>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                onClick={() => handleAprobar(solicitud.id)}
-                              >
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => handleRechazar(solicitud.id)}
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
+                </thead>
+                <tbody>
+                  {filteredSolicitudes.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-6 text-center text-gray-500">
+                        No se encontraron solicitudes
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    filteredSolicitudes.map((solicitud) => (
+                      <tr key={solicitud.id} className="border-b">
+                        <td className="py-3 px-4">{solicitud.nombre_negocio}</td>
+                        <td className="py-3 px-4">{solicitud.nombre_contacto}</td>
+                        <td className="py-3 px-4">
+                          {new Date(solicitud.creada_en).toLocaleDateString('es-ES')}
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge className={
+                            solicitud.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100' :
+                            solicitud.estado === 'aceptado' ? 'bg-green-100 text-green-800 hover:bg-green-100' :
+                            'bg-red-100 text-red-800 hover:bg-red-100'
+                          }>
+                            {solicitud.estado === 'pendiente' ? 'Pendiente' :
+                             solicitud.estado === 'aceptado' ? 'Aceptada' :
+                             'Rechazada'}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleViewDetails(solicitud)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {solicitud.estado === 'pendiente' && (
+                              <>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                  onClick={() => handleAprobar(solicitud.id)}
+                                  disabled={loading}
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => handleRechazar(solicitud.id)}
+                                  disabled={loading}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -282,6 +349,7 @@ const AdminSolicitudesPage = () => {
                   variant="outline"
                   className="bg-red-50 hover:bg-red-100 text-red-600 border-red-200"
                   onClick={() => handleRechazar(selectedSolicitud.id)}
+                  disabled={loading}
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Rechazar
@@ -289,6 +357,7 @@ const AdminSolicitudesPage = () => {
                 <Button
                   className="bg-green-600 hover:bg-green-700"
                   onClick={() => handleAprobar(selectedSolicitud.id)}
+                  disabled={loading}
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Aprobar
