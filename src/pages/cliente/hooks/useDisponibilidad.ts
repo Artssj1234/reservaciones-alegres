@@ -3,8 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { getDiasDisponibles, getHorariosDisponibles } from '@/integrations/supabase/client';
 import { HorarioDisponible, DiaDisponible } from '@/types';
-import { format, isAfter, isBefore } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { format } from 'date-fns';
 
 export const useDisponibilidad = (negocioId: string | undefined, servicioId: string, fecha: Date) => {
   const [horasDisponibles, setHorasDisponibles] = useState<HorarioDisponible[]>([]);
@@ -22,17 +21,16 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
     if (!negocioId) return;
     
     try {
-      console.log(`Obteniendo días disponibles para negocio ID: ${negocioId} en año: ${anio}, mes: ${mes}`);
+      console.log(`Obteniendo días disponibles para negocio ID: ${negocioId} en año: ${anio}, mes: ${mes}, servicio: ${servicioId}`);
       setIsLoading(true);
       
-      const diasDispResult = await getDiasDisponibles(negocioId, anio, mes);
+      const diasDispResult = await getDiasDisponibles(negocioId, anio, mes, servicioId);
       
       if (diasDispResult.success && diasDispResult.data) {
         const dias = diasDispResult.data;
         setDiasDisponibles(dias);
         
-        // La clave es marcar como seleccionable cualquier día que tenga horario configurado
-        // aunque esté parcialmente bloqueado
+        // Marcar como seleccionable cualquier día que tenga disponibilidad
         const fechasDisponibles = new Set<string>();
         dias.forEach(dia => {
           if (dia.tiene_disponibilidad || dia.estado === 'disponible' || dia.estado === 'parcialmente_bloqueado') {
@@ -49,7 +47,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         if (fechasDisponibles.size === 0) {
           toast({
             title: "Información",
-            description: "No hay horarios configurados para este mes. Por favor, configura tus horarios regulares.",
+            description: "No hay horarios disponibles para este mes.",
             duration: 5000,
           });
         }
@@ -75,7 +73,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
     } finally {
       setIsLoading(false);
     }
-  }, [negocioId, toast]);
+  }, [negocioId, servicioId, toast]);
 
   const handleMonthChange = useCallback((date: Date) => {
     const nuevoAnio = date.getFullYear();
@@ -116,20 +114,13 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         
         const fechaFormateada = format(fecha, 'yyyy-MM-dd');
         
-        // Get the duration from the selected service
-        let duracionMinutos = 30; // Default duration
-        
-        if (servicioId) {
-          // Here we would ideally get the duration from the service
-          // But for now we'll assume it's passed to the function
-          duracionMinutos = servicioId ? 30 : 30; 
-        }
-        
-        console.log(`Obteniendo horarios para negocio: ${negocioId}, fecha: ${fechaFormateada}, duración: ${duracionMinutos}`);
+        // Get the selected service to pass its ID
+        console.log(`Obteniendo horarios para negocio: ${negocioId}, fecha: ${fechaFormateada}, servicio: ${servicioId}`);
         const result = await getHorariosDisponibles(
           negocioId,
           fechaFormateada,
-          duracionMinutos
+          0,  // Enviar 0 como duración porque ahora pasamos el servicio_id
+          servicioId // Pasamos el ID del servicio para que la función obtenga su duración
         );
         
         if (result.success && result.data) {

@@ -45,6 +45,13 @@ export type Database = {
             referencedRelation: "negocios"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "bloqueos_temporales_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "vista_disponibilidad_negocios"
+            referencedColumns: ["negocio_id"]
+          },
         ]
       }
       citas: {
@@ -93,11 +100,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "citas_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "vista_disponibilidad_negocios"
+            referencedColumns: ["negocio_id"]
+          },
+          {
             foreignKeyName: "citas_servicio_id_fkey"
             columns: ["servicio_id"]
             isOneToOne: false
             referencedRelation: "servicios"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "citas_servicio_id_fkey"
+            columns: ["servicio_id"]
+            isOneToOne: false
+            referencedRelation: "vista_disponibilidad_negocios"
+            referencedColumns: ["servicio_id"]
           },
         ]
       }
@@ -140,6 +161,13 @@ export type Database = {
             referencedRelation: "negocios"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "clientes_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "vista_disponibilidad_negocios"
+            referencedColumns: ["negocio_id"]
+          },
         ]
       }
       horarios_recurrentes: {
@@ -171,6 +199,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "negocios"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "horarios_recurrentes_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "vista_disponibilidad_negocios"
+            referencedColumns: ["negocio_id"]
           },
         ]
       }
@@ -210,28 +245,50 @@ export type Database = {
             referencedRelation: "negocios"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "horas_bloqueadas_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "vista_disponibilidad_negocios"
+            referencedColumns: ["negocio_id"]
+          },
         ]
       }
       negocios: {
         Row: {
+          correo: string | null
           creado_en: string | null
+          descripcion: string | null
+          direccion: string | null
           id: string
           nombre: string
+          sitio_web: string | null
           slug: string
+          telefono: string | null
           usuario_id: string | null
         }
         Insert: {
+          correo?: string | null
           creado_en?: string | null
+          descripcion?: string | null
+          direccion?: string | null
           id?: string
           nombre: string
+          sitio_web?: string | null
           slug: string
+          telefono?: string | null
           usuario_id?: string | null
         }
         Update: {
+          correo?: string | null
           creado_en?: string | null
+          descripcion?: string | null
+          direccion?: string | null
           id?: string
           nombre?: string
+          sitio_web?: string | null
           slug?: string
+          telefono?: string | null
           usuario_id?: string | null
         }
         Relationships: [
@@ -247,24 +304,30 @@ export type Database = {
       servicios: {
         Row: {
           activo: boolean | null
+          descripcion: string | null
           duracion_minutos: number
           id: string
           negocio_id: string | null
           nombre: string
+          precio: number | null
         }
         Insert: {
           activo?: boolean | null
+          descripcion?: string | null
           duracion_minutos: number
           id?: string
           negocio_id?: string | null
           nombre: string
+          precio?: number | null
         }
         Update: {
           activo?: boolean | null
+          descripcion?: string | null
           duracion_minutos?: number
           id?: string
           negocio_id?: string | null
           nombre?: string
+          precio?: number | null
         }
         Relationships: [
           {
@@ -273,6 +336,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "negocios"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "servicios_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "vista_disponibilidad_negocios"
+            referencedColumns: ["negocio_id"]
           },
         ]
       }
@@ -347,6 +417,20 @@ export type Database = {
       }
     }
     Views: {
+      vista_disponibilidad_negocios: {
+        Row: {
+          dia_semana: string | null
+          duracion_minutos: number | null
+          horario_fin: string | null
+          horario_inicio: string | null
+          negocio_id: string | null
+          negocio_nombre: string | null
+          negocio_slug: string | null
+          servicio_id: string | null
+          servicio_nombre: string | null
+        }
+        Relationships: []
+      }
       vista_horarios_disponibles: {
         Row: {
           dia_semana: string | null
@@ -362,6 +446,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "negocios"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "horarios_recurrentes_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "vista_disponibilidad_negocios"
+            referencedColumns: ["negocio_id"]
           },
         ]
       }
@@ -421,31 +512,60 @@ export type Database = {
         }
         Returns: Json
       }
-      obtener_dias_disponibles_mes: {
-        Args: {
-          p_negocio_id: string
-          p_anio: number
-          p_mes: number
-        }
-        Returns: {
-          fecha: string
-          tiene_disponibilidad: boolean
-          estado: string
-        }[]
-      }
-      obtener_horarios_disponibles: {
-        Args: {
-          p_negocio_id: string
-          p_fecha: string
-          p_duracion_minutos: number
-        }
-        Returns: {
-          hora_inicio: string
-          hora_fin: string
-          disponible: boolean
-          estado: string
-        }[]
-      }
+      obtener_dias_disponibles_mes:
+        | {
+            Args: {
+              p_negocio_id: string
+              p_anio: number
+              p_mes: number
+            }
+            Returns: {
+              fecha: string
+              tiene_disponibilidad: boolean
+              estado: string
+            }[]
+          }
+        | {
+            Args: {
+              p_negocio_id: string
+              p_anio: number
+              p_mes: number
+              p_servicio_id?: string
+            }
+            Returns: {
+              fecha: string
+              tiene_disponibilidad: boolean
+              estado: string
+            }[]
+          }
+      obtener_horarios_disponibles:
+        | {
+            Args: {
+              p_negocio_id: string
+              p_fecha: string
+              p_duracion_minutos: number
+            }
+            Returns: {
+              hora_inicio: string
+              hora_fin: string
+              disponible: boolean
+              estado: string
+            }[]
+          }
+        | {
+            Args: {
+              p_negocio_id: string
+              p_fecha: string
+              p_duracion_minutos: number
+              p_servicio_id?: string
+            }
+            Returns: {
+              hora_inicio: string
+              hora_fin: string
+              disponible: boolean
+              estado: string
+            }[]
+          }
       update_negocio_profile: {
         Args: {
           p_negocio_id: string
@@ -457,10 +577,15 @@ export type Database = {
           p_sitio_web: string
         }
         Returns: {
+          correo: string | null
           creado_en: string | null
+          descripcion: string | null
+          direccion: string | null
           id: string
           nombre: string
+          sitio_web: string | null
           slug: string
+          telefono: string | null
           usuario_id: string | null
         }[]
       }
