@@ -228,6 +228,7 @@ export type Database = {
       }
       solicitudes_negocio: {
         Row: {
+          contrasena: string | null
           correo: string
           creada_en: string | null
           estado: string | null
@@ -237,8 +238,10 @@ export type Database = {
           nombre_negocio: string
           slug: string
           telefono: string
+          usuario: string | null
         }
         Insert: {
+          contrasena?: string | null
           correo: string
           creada_en?: string | null
           estado?: string | null
@@ -248,8 +251,10 @@ export type Database = {
           nombre_negocio: string
           slug: string
           telefono: string
+          usuario?: string | null
         }
         Update: {
+          contrasena?: string | null
           correo?: string
           creada_en?: string | null
           estado?: string | null
@@ -259,6 +264,7 @@ export type Database = {
           nombre_negocio?: string
           slug?: string
           telefono?: string
+          usuario?: string | null
         }
         Relationships: []
       }
