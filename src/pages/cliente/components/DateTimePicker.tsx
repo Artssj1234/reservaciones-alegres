@@ -1,10 +1,9 @@
-
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Info, Loader2, AlertCircle } from 'lucide-react';
-import { format, isAfter, isBefore, addMonths, startOfMonth, parse } from 'date-fns';
+import { format, isAfter, isBefore, addMonths, startOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { HorarioDisponible } from '@/types';
 import { useToast } from '@/components/ui/use-toast';
