@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,21 +15,24 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { supabase } from '@/integrations/supabase/client';
 
 const NegocioPerfilPage = () => {
-  const { auth } = useAuth();
+  const { auth, updateNegocio } = useAuth();
   const { toast } = useToast();
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   const slug = auth.negocio?.slug || 'mi-negocio';
   const shareUrl = `${window.location.origin}/${slug}/cita`;
   
-  // En una aplicación real, estos datos vendrían de Supabase
+  // Datos del perfil del negocio
   const [formData, setFormData] = useState({
     nombre: auth.negocio?.nombre || 'Mi Negocio',
-    correo: 'contacto@email.com',
-    telefono: '+34612345678',
-    direccion: 'Calle Ejemplo, 123, Madrid',
+    correo: '',
+    telefono: '',
+    direccion: '',
     contrasena: '******',
     nuevaContrasena: '',
     confirmarContrasena: '',
@@ -37,17 +40,56 @@ const NegocioPerfilPage = () => {
   
   const [cambiarContrasena, setCambiarContrasena] = useState(false);
 
+  // Cargar datos adicionales del negocio
+  useEffect(() => {
+    const loadNegocioData = async () => {
+      if (!auth.negocio?.id) return;
+      
+      setIsLoading(true);
+      
+      try {
+        // Aquí cargaríamos datos adicionales del negocio desde Supabase
+        // Por ahora solo usamos los datos que ya tenemos en auth
+        
+        // Para una implementación real, obtenemos datos del perfil del negocio desde Supabase
+        setFormData(prev => ({
+          ...prev,
+          nombre: auth.negocio?.nombre || 'Mi Negocio',
+          // Los demás campos se cargarían desde Supabase
+        }));
+      } catch (error) {
+        console.error('Error al cargar datos del perfil:', error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los datos del perfil. Intenta de nuevo más tarde.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadNegocioData();
+  }, [auth.negocio?.id, toast]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // En una aplicación real, esto se enviaría a Supabase
+    if (!auth.negocio?.id || !auth.usuario?.id) {
+      toast({
+        title: "Error",
+        description: "No se encontró información del negocio. Intenta iniciar sesión de nuevo.",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    // Si el usuario está cambiando la contraseña, verificar que ambas coincidan
+    // Verificar contraseñas si el usuario está cambiando la contraseña
     if (cambiarContrasena) {
       if (formData.nuevaContrasena !== formData.confirmarContrasena) {
         toast({
@@ -68,19 +110,74 @@ const NegocioPerfilPage = () => {
       }
     }
     
-    toast({
-      title: "Perfil actualizado",
-      description: "Los cambios han sido guardados correctamente.",
-    });
+    setIsSaving(true);
     
-    // Resetear campos de contraseña
-    setFormData(prev => ({
-      ...prev,
-      nuevaContrasena: '',
-      confirmarContrasena: '',
-    }));
-    
-    setCambiarContrasena(false);
+    try {
+      // Actualizar nombre del negocio
+      const { error: negocioError } = await supabase
+        .from('negocios')
+        .update({ nombre: formData.nombre })
+        .eq('id', auth.negocio.id);
+        
+      if (negocioError) {
+        console.error('Error al actualizar el negocio:', negocioError);
+        toast({
+          title: "Error",
+          description: "No se pudo actualizar la información del negocio.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Si el usuario está cambiando la contraseña, actualizarla
+      if (cambiarContrasena && formData.nuevaContrasena) {
+        const { error: usuarioError } = await supabase
+          .from('usuarios')
+          .update({ contrasena: formData.nuevaContrasena })
+          .eq('id', auth.usuario.id);
+          
+        if (usuarioError) {
+          console.error('Error al actualizar la contraseña:', usuarioError);
+          toast({
+            title: "Error",
+            description: "No se pudo actualizar la contraseña.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+      
+      // Actualizar los datos en el estado de autenticación
+      if (auth.negocio) {
+        updateNegocio({
+          ...auth.negocio,
+          nombre: formData.nombre
+        });
+      }
+      
+      toast({
+        title: "Perfil actualizado",
+        description: "Los cambios han sido guardados correctamente.",
+      });
+      
+      // Resetear campos de contraseña
+      setFormData(prev => ({
+        ...prev,
+        nuevaContrasena: '',
+        confirmarContrasena: '',
+      }));
+      
+      setCambiarContrasena(false);
+    } catch (error) {
+      console.error('Error al guardar datos del perfil:', error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error al guardar los cambios. Intenta de nuevo más tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCopyLink = () => {
@@ -104,110 +201,117 @@ const NegocioPerfilPage = () => {
             <CardTitle>Información del Negocio</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="nombre">Nombre del Negocio</Label>
-                <Input
-                  id="nombre"
-                  name="nombre"
-                  value={formData.nombre}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {isLoading ? (
+              <div className="py-8 text-center text-gray-500">Cargando datos del perfil...</div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="correo">Correo Electrónico</Label>
+                  <Label htmlFor="nombre">Nombre del Negocio</Label>
                   <Input
-                    id="correo"
-                    name="correo"
-                    type="email"
-                    value={formData.correo}
+                    id="nombre"
+                    name="nombre"
+                    value={formData.nombre}
                     onChange={handleChange}
                     required
                   />
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="telefono">Teléfono</Label>
-                  <Input
-                    id="telefono"
-                    name="telefono"
-                    value={formData.telefono}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="direccion">Dirección</Label>
-                <Input
-                  id="direccion"
-                  name="direccion"
-                  value={formData.direccion}
-                  onChange={handleChange}
-                />
-              </div>
-              
-              <div className="pt-4 border-t mt-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">Cambiar Contraseña</h3>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setCambiarContrasena(!cambiarContrasena)}
-                  >
-                    {cambiarContrasena ? 'Cancelar' : 'Cambiar'}
-                  </Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="correo">Correo Electrónico</Label>
+                    <Input
+                      id="correo"
+                      name="correo"
+                      type="email"
+                      value={formData.correo}
+                      onChange={handleChange}
+                      placeholder="contacto@email.com"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="telefono">Teléfono</Label>
+                    <Input
+                      id="telefono"
+                      name="telefono"
+                      value={formData.telefono}
+                      onChange={handleChange}
+                      placeholder="+34612345678"
+                    />
+                  </div>
                 </div>
                 
-                {cambiarContrasena && (
-                  <div className="space-y-4 mt-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="contrasena">Contraseña Actual</Label>
-                      <Input
-                        id="contrasena"
-                        name="contrasena"
-                        type="password"
-                        value={formData.contrasena}
-                        onChange={handleChange}
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="direccion">Dirección</Label>
+                  <Input
+                    id="direccion"
+                    name="direccion"
+                    value={formData.direccion}
+                    onChange={handleChange}
+                    placeholder="Calle Ejemplo, 123, Madrid"
+                  />
+                </div>
+                
+                <div className="pt-4 border-t mt-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium">Cambiar Contraseña</h3>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setCambiarContrasena(!cambiarContrasena)}
+                    >
+                      {cambiarContrasena ? 'Cancelar' : 'Cambiar'}
+                    </Button>
+                  </div>
+                  
+                  {cambiarContrasena && (
+                    <div className="space-y-4 mt-4">
                       <div className="space-y-2">
-                        <Label htmlFor="nuevaContrasena">Nueva Contraseña</Label>
+                        <Label htmlFor="contrasena">Contraseña Actual</Label>
                         <Input
-                          id="nuevaContrasena"
-                          name="nuevaContrasena"
+                          id="contrasena"
+                          name="contrasena"
                           type="password"
-                          value={formData.nuevaContrasena}
+                          value={formData.contrasena}
                           onChange={handleChange}
                         />
                       </div>
                       
-                      <div className="space-y-2">
-                        <Label htmlFor="confirmarContrasena">Confirmar Contraseña</Label>
-                        <Input
-                          id="confirmarContrasena"
-                          name="confirmarContrasena"
-                          type="password"
-                          value={formData.confirmarContrasena}
-                          onChange={handleChange}
-                        />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="nuevaContrasena">Nueva Contraseña</Label>
+                          <Input
+                            id="nuevaContrasena"
+                            name="nuevaContrasena"
+                            type="password"
+                            value={formData.nuevaContrasena}
+                            onChange={handleChange}
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="confirmarContrasena">Confirmar Contraseña</Label>
+                          <Input
+                            id="confirmarContrasena"
+                            name="confirmarContrasena"
+                            type="password"
+                            value={formData.confirmarContrasena}
+                            onChange={handleChange}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="pt-4">
-                <Button type="submit">Guardar Cambios</Button>
-              </div>
-            </form>
+                  )}
+                </div>
+                
+                <div className="pt-4">
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                  </Button>
+                </div>
+              </form>
+            )}
           </CardContent>
         </Card>
         

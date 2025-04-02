@@ -102,3 +102,238 @@ export const getBusinessByUserId = async (userId: string): Promise<BusinessRespo
   console.error('Formato de respuesta inesperado:', data);
   return { success: false, message: 'Error desconocido: formato de respuesta inválido' };
 };
+
+// Nuevas funciones para obtener datos reales del negocio
+export const getCitasByNegocioId = async (negocioId: string) => {
+  console.log('Obteniendo citas para negocio ID:', negocioId);
+  
+  const { data, error } = await supabase
+    .from('citas')
+    .select('*')
+    .eq('negocio_id', negocioId);
+  
+  if (error) {
+    console.error('Error al obtener citas:', error);
+    return { success: false, message: error.message, data: [] };
+  }
+  
+  return { success: true, data: data || [] };
+};
+
+export const getServiciosByNegocioId = async (negocioId: string) => {
+  console.log('Obteniendo servicios para negocio ID:', negocioId);
+  
+  const { data, error } = await supabase
+    .from('servicios')
+    .select('*')
+    .eq('negocio_id', negocioId);
+  
+  if (error) {
+    console.error('Error al obtener servicios:', error);
+    return { success: false, message: error.message, data: [] };
+  }
+  
+  return { success: true, data: data || [] };
+};
+
+export const getHorariosByNegocioId = async (negocioId: string) => {
+  console.log('Obteniendo horarios para negocio ID:', negocioId);
+  
+  const { data, error } = await supabase
+    .from('horarios_recurrentes')
+    .select('*')
+    .eq('negocio_id', negocioId);
+  
+  if (error) {
+    console.error('Error al obtener horarios:', error);
+    return { success: false, message: error.message, data: [] };
+  }
+  
+  return { success: true, data: data || [] };
+};
+
+export const getHorasBloqueadasByNegocioId = async (negocioId: string) => {
+  console.log('Obteniendo horas bloqueadas para negocio ID:', negocioId);
+  
+  const { data, error } = await supabase
+    .from('horas_bloqueadas')
+    .select('*')
+    .eq('negocio_id', negocioId);
+  
+  if (error) {
+    console.error('Error al obtener horas bloqueadas:', error);
+    return { success: false, message: error.message, data: [] };
+  }
+  
+  return { success: true, data: data || [] };
+};
+
+// Funciones para crear, actualizar y eliminar datos
+export const createServicio = async (servicio: any) => {
+  const { data, error } = await supabase
+    .from('servicios')
+    .insert(servicio)
+    .select('*')
+    .single();
+  
+  if (error) {
+    console.error('Error al crear servicio:', error);
+    return { success: false, message: error.message };
+  }
+  
+  return { success: true, data };
+};
+
+export const updateServicio = async (id: string, servicio: any) => {
+  const { data, error } = await supabase
+    .from('servicios')
+    .update(servicio)
+    .eq('id', id)
+    .select('*')
+    .single();
+  
+  if (error) {
+    console.error('Error al actualizar servicio:', error);
+    return { success: false, message: error.message };
+  }
+  
+  return { success: true, data };
+};
+
+export const deleteServicio = async (id: string) => {
+  const { error } = await supabase
+    .from('servicios')
+    .delete()
+    .eq('id', id);
+  
+  if (error) {
+    console.error('Error al eliminar servicio:', error);
+    return { success: false, message: error.message };
+  }
+  
+  return { success: true };
+};
+
+// Funciones similares para citas
+export const updateCita = async (id: string, cita: any) => {
+  const { data, error } = await supabase
+    .from('citas')
+    .update(cita)
+    .eq('id', id)
+    .select('*')
+    .single();
+  
+  if (error) {
+    console.error('Error al actualizar cita:', error);
+    return { success: false, message: error.message };
+  }
+  
+  return { success: true, data };
+};
+
+export const createCita = async (cita: any) => {
+  const { data, error } = await supabase
+    .from('citas')
+    .insert(cita)
+    .select('*')
+    .single();
+  
+  if (error) {
+    console.error('Error al crear cita:', error);
+    return { success: false, message: error.message };
+  }
+  
+  return { success: true, data };
+};
+
+// Funciones para horarios
+export const createHorario = async (horario: any) => {
+  const { data, error } = await supabase
+    .from('horarios_recurrentes')
+    .insert(horario)
+    .select('*')
+    .single();
+  
+  if (error) {
+    console.error('Error al crear horario:', error);
+    return { success: false, message: error.message };
+  }
+  
+  return { success: true, data };
+};
+
+export const updateHorario = async (id: string, horario: any) => {
+  const { data, error } = await supabase
+    .from('horarios_recurrentes')
+    .update(horario)
+    .eq('id', id)
+    .select('*')
+    .single();
+  
+  if (error) {
+    console.error('Error al actualizar horario:', error);
+    return { success: false, message: error.message };
+  }
+  
+  return { success: true, data };
+};
+
+export const deleteHorario = async (id: string) => {
+  const { error } = await supabase
+    .from('horarios_recurrentes')
+    .delete()
+    .eq('id', id);
+  
+  if (error) {
+    console.error('Error al eliminar horario:', error);
+    return { success: false, message: error.message };
+  }
+  
+  return { success: true };
+};
+
+// Funciones para horas bloqueadas
+export const createHoraBloqueada = async (horaBloqueada: any) => {
+  const { data, error } = await supabase
+    .from('horas_bloqueadas')
+    .insert(horaBloqueada)
+    .select('*')
+    .single();
+  
+  if (error) {
+    console.error('Error al crear hora bloqueada:', error);
+    return { success: false, message: error.message };
+  }
+  
+  return { success: true, data };
+};
+
+export const updateHoraBloqueada = async (id: string, horaBloqueada: any) => {
+  const { data, error } = await supabase
+    .from('horas_bloqueadas')
+    .update(horaBloqueada)
+    .eq('id', id)
+    .select('*')
+    .single();
+  
+  if (error) {
+    console.error('Error al actualizar hora bloqueada:', error);
+    return { success: false, message: error.message };
+  }
+  
+  return { success: true, data };
+};
+
+export const deleteHoraBloqueada = async (id: string) => {
+  const { error } = await supabase
+    .from('horas_bloqueadas')
+    .delete()
+    .eq('id', id);
+  
+  if (error) {
+    console.error('Error al eliminar hora bloqueada:', error);
+    return { success: false, message: error.message };
+  }
+  
+  return { success: true };
+};

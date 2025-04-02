@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Clock, Scissors, Users, ChevronRight, Share2, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,48 +14,96 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/components/ui/use-toast';
+import { getCitasByNegocioId, getServiciosByNegocioId } from '@/integrations/supabase/client';
 
 const NegocioDashboard = () => {
   const { auth } = useAuth();
-  const [qrDialogOpen, setQrDialogOpen] = React.useState(false);
-  const [shareDialogOpen, setShareDialogOpen] = React.useState(false);
+  const { toast } = useToast();
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    citasHoy: 0,
+    citasPendientes: 0,
+    totalServicios: 0,
+    clientesAtendidos: 0
+  });
+  const [citasRecientes, setCitasRecientes] = useState<any[]>([]);
   
   const slug = auth.negocio?.slug || 'mi-negocio';
   const shareUrl = `${window.location.origin}/${slug}/cita`;
+  const negocioId = auth.negocio?.id;
 
-  const stats = {
-    citasHoy: 5,
-    citasPendientes: 8,
-    totalServicios: 12,
-    clientesAtendidos: 127
-  };
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        
+        if (!negocioId) {
+          console.error('No se encontró ID de negocio en la sesión');
+          toast({
+            title: "Error",
+            description: "No se pudo cargar la información del negocio. Intenta iniciar sesión de nuevo.",
+            variant: "destructive",
+          });
+          return;
+        }
 
-  const citasRecientes = [
-    { 
-      id: '1', 
-      cliente: 'Juan Pérez', 
-      servicio: 'Corte de pelo',
-      fecha: '2023-06-15',
-      hora: '10:00',
-      estado: 'pendiente'
-    },
-    { 
-      id: '2', 
-      cliente: 'María López', 
-      servicio: 'Tinte de cabello',
-      fecha: '2023-06-15',
-      hora: '11:30',
-      estado: 'aceptada'
-    },
-    { 
-      id: '3', 
-      cliente: 'Carlos Gómez', 
-      servicio: 'Corte y afeitado',
-      fecha: '2023-06-15',
-      hora: '15:00',
-      estado: 'pendiente'
-    }
-  ];
+        // Cargar citas
+        const citasResult = await getCitasByNegocioId(negocioId);
+        const serviciosResult = await getServiciosByNegocioId(negocioId);
+        
+        if (citasResult.success && Array.isArray(citasResult.data)) {
+          const citas = citasResult.data;
+          
+          // Filtrar citas para hoy
+          const today = new Date().toISOString().split('T')[0];
+          const citasHoy = citas.filter(cita => cita.fecha === today).length;
+          
+          // Citas pendientes
+          const citasPendientes = citas.filter(cita => cita.estado === 'pendiente').length;
+          
+          // Total de clientes atendidos (citas completadas)
+          const clientesAtendidos = citas.filter(cita => cita.estado === 'aceptada').length;
+          
+          // Citas recientes (las últimas 3)
+          const recientes = citas
+            .sort((a, b) => new Date(b.creada_en || '').getTime() - new Date(a.creada_en || '').getTime())
+            .slice(0, 3);
+          
+          setCitasRecientes(recientes);
+          
+          // Actualizar stats
+          setStats(prev => ({
+            ...prev,
+            citasHoy,
+            citasPendientes,
+            clientesAtendidos,
+            totalServicios: serviciosResult.success ? serviciosResult.data.length : 0
+          }));
+        } else {
+          console.error('Error al cargar citas:', citasResult.message);
+          toast({
+            title: "Error",
+            description: "No se pudieron cargar las citas. Intenta de nuevo más tarde.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Error al cargar datos del dashboard:', error);
+        toast({
+          title: "Error",
+          description: "Ocurrió un error al cargar los datos. Intenta de nuevo más tarde.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadDashboardData();
+  }, [negocioId, toast]);
 
   const handleShareClick = () => {
     setShareDialogOpen(true);
@@ -66,12 +115,24 @@ const NegocioDashboard = () => {
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareUrl);
+    toast({
+      title: "Enlace copiado",
+      description: "El enlace ha sido copiado al portapapeles",
+    });
+  };
+
+  const formatFecha = (fechaStr: string) => {
+    try {
+      return new Date(fechaStr).toLocaleDateString('es-ES');
+    } catch (e) {
+      return fechaStr;
+    }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h1 className="text-3xl font-bold">Panel de {auth.negocio?.nombre}</h1>
+        <h1 className="text-3xl font-bold">Panel de {auth.negocio?.nombre || 'Negocio'}</h1>
         
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleShareClick}>
@@ -92,7 +153,7 @@ const NegocioDashboard = () => {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.citasHoy}</div>
+            <div className="text-2xl font-bold">{isLoading ? '...' : stats.citasHoy}</div>
             <p className="text-xs text-muted-foreground">
               Para el día de hoy
             </p>
@@ -105,7 +166,7 @@ const NegocioDashboard = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.citasPendientes}</div>
+            <div className="text-2xl font-bold">{isLoading ? '...' : stats.citasPendientes}</div>
             <p className="text-xs text-muted-foreground">
               Esperando aprobación
             </p>
@@ -118,7 +179,7 @@ const NegocioDashboard = () => {
             <Scissors className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalServicios}</div>
+            <div className="text-2xl font-bold">{isLoading ? '...' : stats.totalServicios}</div>
             <p className="text-xs text-muted-foreground">
               <Link to="/negocio/servicios" className="text-reserva-primary hover:underline">
                 Gestionar servicios
@@ -133,7 +194,7 @@ const NegocioDashboard = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.clientesAtendidos}</div>
+            <div className="text-2xl font-bold">{isLoading ? '...' : stats.clientesAtendidos}</div>
             <p className="text-xs text-muted-foreground">
               En total
             </p>
@@ -152,29 +213,42 @@ const NegocioDashboard = () => {
           </Link>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-4">
-            {citasRecientes.map((cita) => (
-              <li key={cita.id} className="flex items-center justify-between border-b pb-2">
-                <div>
-                  <p className="font-medium">{cita.cliente}</p>
-                  <p className="text-sm text-gray-500">{cita.servicio}</p>
-                  <p className="text-sm text-gray-500">
-                    {new Date(cita.fecha).toLocaleDateString('es-ES')} - {cita.hora}
-                  </p>
-                </div>
-                <div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    cita.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 
-                    cita.estado === 'aceptada' ? 'bg-green-100 text-green-800' : 
-                    'bg-red-100 text-red-800'
-                  }`}>
-                    {cita.estado === 'pendiente' ? 'Pendiente' : 
-                     cita.estado === 'aceptada' ? 'Aceptada' : 'Rechazada'}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {isLoading ? (
+            <div className="py-8 text-center text-gray-500">Cargando citas...</div>
+          ) : citasRecientes.length === 0 ? (
+            <div className="py-8 text-center text-gray-500">
+              No hay citas recientes. 
+              <div className="mt-2">
+                <Link to="/negocio/citas" className="text-reserva-primary hover:underline">
+                  Gestionar citas
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <ul className="space-y-4">
+              {citasRecientes.map((cita) => (
+                <li key={cita.id} className="flex items-center justify-between border-b pb-2">
+                  <div>
+                    <p className="font-medium">{cita.nombre_cliente}</p>
+                    <p className="text-sm text-gray-500">{cita.servicio || 'Servicio no especificado'}</p>
+                    <p className="text-sm text-gray-500">
+                      {formatFecha(cita.fecha)} - {cita.hora_inicio}
+                    </p>
+                  </div>
+                  <div>
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      cita.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 
+                      cita.estado === 'aceptada' ? 'bg-green-100 text-green-800' : 
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {cita.estado === 'pendiente' ? 'Pendiente' : 
+                       cita.estado === 'aceptada' ? 'Aceptada' : 'Rechazada'}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
 
