@@ -85,4 +85,5 @@ export interface HorarioDisponible {
 export interface DiaDisponible {
   fecha: string;
   tiene_disponibilidad: boolean;
+  estado: string; // Adding the estado property that's coming from the API
 }

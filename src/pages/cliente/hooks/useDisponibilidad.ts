@@ -32,7 +32,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         setDiasDisponibles(dias);
         
         // Crear un Set con las fechas que tienen disponibilidad para facilitar la búsqueda
-        // Importante: Ahora consideramos TODOS los días que tienen horario configurado como disponibles
+        // Importante: Consideramos TODOS los días que tienen horario configurado como disponibles
         // incluso si no tienen el campo tiene_disponibilidad como true
         const fechasDisponibles = new Set<string>();
         dias.forEach(dia => {
