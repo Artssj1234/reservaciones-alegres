@@ -55,6 +55,23 @@ const diasSemana = [
   { valor: 'domingo', texto: 'Domingo' },
 ];
 
+// Función para validar y transformar los datos de horarios recibidos de Supabase
+const validateHorarioRecurrente = (horario: any): HorarioRecurrente | null => {
+  // Verificar que dia_semana sea uno de los valores válidos
+  if (!horario || !horario.dia_semana || !diasSemana.some(dia => dia.valor === horario.dia_semana)) {
+    console.error('Día de semana inválido en horario:', horario);
+    return null;
+  }
+  
+  return {
+    id: horario.id,
+    negocio_id: horario.negocio_id,
+    dia_semana: horario.dia_semana as HorarioRecurrente['dia_semana'],
+    hora_inicio: horario.hora_inicio,
+    hora_fin: horario.hora_fin
+  };
+};
+
 const NegocioHorariosPage = () => {
   const { auth } = useAuth();
   const [activeTab, setActiveTab] = useState<'horarios' | 'bloqueados'>('horarios');
@@ -109,7 +126,15 @@ const NegocioHorariosPage = () => {
         ]);
         
         if (horariosResult.success) {
-          setHorarios(horariosResult.data);
+          // Validar y filtrar los horarios recurrentes
+          const validatedHorarios: HorarioRecurrente[] = [];
+          horariosResult.data.forEach((horario: any) => {
+            const validHorario = validateHorarioRecurrente(horario);
+            if (validHorario) {
+              validatedHorarios.push(validHorario);
+            }
+          });
+          setHorarios(validatedHorarios);
         } else {
           console.error('Error al cargar horarios:', horariosResult.message);
           toast({
@@ -196,14 +221,17 @@ const NegocioHorariosPage = () => {
         });
         
         if (result.success) {
-          setHorarios(prev => prev.map(h => 
-            h.id === horarioForm.id ? result.data : h
-          ));
-          
-          toast({
-            title: "Horario actualizado",
-            description: "Los cambios han sido guardados correctamente.",
-          });
+          const validatedHorario = validateHorarioRecurrente(result.data);
+          if (validatedHorario) {
+            setHorarios(prev => prev.map(h => 
+              h.id === horarioForm.id ? validatedHorario : h
+            ));
+            
+            toast({
+              title: "Horario actualizado",
+              description: "Los cambios han sido guardados correctamente.",
+            });
+          }
         }
       } else {
         // Crear nuevo horario
@@ -217,11 +245,14 @@ const NegocioHorariosPage = () => {
         result = await createHorario(horarioData);
         
         if (result.success) {
-          setHorarios([...horarios, result.data]);
-          toast({
-            title: "Horario añadido",
-            description: "El nuevo horario ha sido añadido correctamente.",
-          });
+          const validatedHorario = validateHorarioRecurrente(result.data);
+          if (validatedHorario) {
+            setHorarios([...horarios, validatedHorario]);
+            toast({
+              title: "Horario añadido",
+              description: "El nuevo horario ha sido añadido correctamente.",
+            });
+          }
         }
       }
       
