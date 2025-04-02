@@ -75,3 +75,14 @@ export interface AuthState {
   usuario: Usuario | null;
   negocio: Negocio | null;
 }
+
+export interface HorarioDisponible {
+  hora_inicio: string;
+  hora_fin: string;
+  disponible: boolean;
+}
+
+export interface DiaDisponible {
+  fecha: string;
+  tiene_disponibilidad: boolean;
+}

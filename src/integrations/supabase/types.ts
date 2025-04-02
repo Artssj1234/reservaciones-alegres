@@ -404,6 +404,29 @@ export type Database = {
         }
         Returns: Json
       }
+      obtener_dias_disponibles_mes: {
+        Args: {
+          p_negocio_id: string
+          p_anio: number
+          p_mes: number
+        }
+        Returns: {
+          fecha: string
+          tiene_disponibilidad: boolean
+        }[]
+      }
+      obtener_horarios_disponibles: {
+        Args: {
+          p_negocio_id: string
+          p_fecha: string
+          p_duracion_minutos: number
+        }
+        Returns: {
+          hora_inicio: string
+          hora_fin: string
+          disponible: boolean
+        }[]
+      }
       update_negocio_profile: {
         Args: {
           p_negocio_id: string

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,7 +39,6 @@ const NegocioCitasPage = () => {
   const [filtroEstado, setFiltroEstado] = useState('todos');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  // Estados para el formulario de nueva cita
   const [nuevaCita, setNuevaCita] = useState({
     nombre_cliente: '',
     telefono_cliente: '',
@@ -193,6 +191,33 @@ const NegocioCitasPage = () => {
     setNuevaCita(prev => ({ ...prev, servicio_id: value }));
   };
 
+  const verificarDisponibilidad = (fecha: string, horaInicio: string, servicio: any) => {
+    const solapada = citas.some(cita => {
+      if (cita.estado === 'rechazada' || cita.fecha !== fecha) return false;
+      
+      const citaInicioMinutos = convertirHoraAMinutos(cita.hora_inicio);
+      const citaFinMinutos = convertirHoraAMinutos(cita.hora_fin);
+      
+      const nuevaInicioMinutos = convertirHoraAMinutos(horaInicio);
+      const nuevaFinMinutos = nuevaInicioMinutos + servicio.duracion_minutos;
+      
+      return (nuevaInicioMinutos < citaFinMinutos && nuevaFinMinutos > citaInicioMinutos);
+    });
+    
+    return !solapada;
+  };
+
+  const convertirHoraAMinutos = (hora: string) => {
+    const [horas, minutos] = hora.split(':').map(Number);
+    return horas * 60 + minutos;
+  };
+
+  const convertirMinutosAHora = (minutos: number) => {
+    const horas = Math.floor(minutos / 60);
+    const mins = minutos % 60;
+    return `${String(horas).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+  };
+
   const handleSubmitNuevaCita = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -220,10 +245,20 @@ const NegocioCitasPage = () => {
       const duracionMinutos = servicio.duracion_minutos;
       const horaInicio = nuevaCita.hora_inicio;
       
-      // Calcular hora fin
-      const [horas, minutos] = horaInicio.split(':').map(Number);
-      const totalMinutos = horas * 60 + minutos + duracionMinutos;
-      const horaFin = `${Math.floor(totalMinutos / 60).toString().padStart(2, '0')}:${(totalMinutos % 60).toString().padStart(2, '0')}`;
+      const disponible = verificarDisponibilidad(nuevaCita.fecha, horaInicio, servicio);
+      
+      if (!disponible) {
+        toast({
+          title: "Error",
+          description: "La hora seleccionada se solapa con otra cita. Por favor, elige otra hora.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const minutosInicio = convertirHoraAMinutos(horaInicio);
+      const minutosTotal = minutosInicio + duracionMinutos;
+      const horaFin = convertirMinutosAHora(minutosTotal);
       
       const newCitaData = {
         negocio_id: negocioId,
@@ -239,7 +274,6 @@ const NegocioCitasPage = () => {
       const result = await createCita(newCitaData);
       
       if (result.success) {
-        // Añadir el nombre del servicio para mostrar correctamente en la lista
         const newCita = {
           ...result.data,
           servicio: servicio.nombre
@@ -300,7 +334,6 @@ const NegocioCitasPage = () => {
         </Button>
       </div>
 
-      {/* Filtros */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
@@ -335,7 +368,6 @@ const NegocioCitasPage = () => {
         </Select>
       </div>
 
-      {/* Lista de citas */}
       <Card>
         <CardHeader>
           <CardTitle>Listado de citas</CardTitle>
@@ -421,7 +453,6 @@ const NegocioCitasPage = () => {
         </CardContent>
       </Card>
 
-      {/* Dialog para nueva cita */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

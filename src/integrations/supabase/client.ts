@@ -468,3 +468,110 @@ export const updateUserPassword = async (id: string, nuevaContrasena: string) =>
   
   return { success: true, data };
 };
+
+// Nuevas funciones para obtener horarios disponibles para los clientes
+export const getHorariosDisponibles = async (negocioId: string, fecha: string, duracionMinutos: number) => {
+  console.log('Obteniendo horarios disponibles para negocio ID:', negocioId, 'en fecha:', fecha, 'para duración:', duracionMinutos, 'minutos');
+  
+  const { data, error } = await supabase.rpc(
+    "obtener_horarios_disponibles",
+    {
+      p_negocio_id: negocioId,
+      p_fecha: fecha,
+      p_duracion_minutos: duracionMinutos
+    }
+  );
+  
+  if (error) {
+    console.error('Error al obtener horarios disponibles:', error);
+    return { success: false, message: error.message, data: [] };
+  }
+  
+  return { success: true, data: data || [] };
+};
+
+export const getDiasDisponibles = async (negocioId: string, anio: number, mes: number) => {
+  console.log('Obteniendo días disponibles para negocio ID:', negocioId, 'en año:', anio, 'mes:', mes);
+  
+  const { data, error } = await supabase.rpc(
+    "obtener_dias_disponibles_mes",
+    {
+      p_negocio_id: negocioId,
+      p_anio: anio,
+      p_mes: mes
+    }
+  );
+  
+  if (error) {
+    console.error('Error al obtener días disponibles:', error);
+    return { success: false, message: error.message, data: [] };
+  }
+  
+  return { success: true, data: data || [] };
+};
+
+export const verificarDisponibilidad = async (negocioId: string, fecha: string, horaInicio: string, horaFin: string) => {
+  console.log('Verificando disponibilidad para negocio ID:', negocioId, 'fecha:', fecha, 'hora inicio:', horaInicio, 'hora fin:', horaFin);
+  
+  const { data, error } = await supabase.rpc(
+    "verificar_disponibilidad",
+    {
+      p_negocio_id: negocioId,
+      p_fecha: fecha,
+      p_hora_inicio: horaInicio,
+      p_hora_fin: horaFin
+    }
+  );
+  
+  if (error) {
+    console.error('Error al verificar disponibilidad:', error);
+    return { success: false, message: error.message, disponible: false };
+  }
+  
+  return { success: true, disponible: data || false };
+};
+
+// Obtener información completa de un negocio por su slug (para clientes)
+export const getNegocioBySlug = async (slug: string) => {
+  console.log('Obteniendo negocio por slug:', slug);
+  
+  const { data, error } = await supabase
+    .from('negocios')
+    .select('*')
+    .eq('slug', slug)
+    .single();
+  
+  if (error) {
+    console.error('Error al obtener negocio por slug:', error);
+    return { success: false, message: error.message };
+  }
+  
+  if (!data) {
+    return { success: false, message: 'Negocio no encontrado' };
+  }
+  
+  return { success: true, data };
+};
+
+// Función para buscar una cita por teléfono (para que los clientes verifiquen su cita)
+export const getCitaByTelefono = async (telefono: string) => {
+  console.log('Buscando cita con teléfono:', telefono);
+  
+  const { data, error } = await supabase
+    .from('citas')
+    .select(`
+      *,
+      negocios (nombre, slug),
+      servicios (nombre, duracion_minutos)
+    `)
+    .eq('telefono_cliente', telefono)
+    .order('fecha', { ascending: true })
+    .limit(5);
+  
+  if (error) {
+    console.error('Error al buscar cita por teléfono:', error);
+    return { success: false, message: error.message, data: [] };
+  }
+  
+  return { success: true, data: data || [] };
+};

@@ -1,20 +1,27 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { Clock, CalendarSearch, CheckCircle } from 'lucide-react';
+import { Search, Calendar, Clock } from 'lucide-react';
+import { getCitaByTelefono } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const VerificarCitaPage = () => {
   const [telefono, setTelefono] = useState('');
-  const [cita, setCita] = useState<any | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [citasEncontradas, setCitasEncontradas] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const handleVerificar = () => {
-    if (!telefono.trim()) {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    
+    if (!telefono || telefono.trim() === '') {
       toast({
         title: "Error",
         description: "Por favor, introduce un número de teléfono.",
@@ -23,114 +30,157 @@ const VerificarCitaPage = () => {
       return;
     }
     
-    setLoading(true);
+    setIsLoading(true);
     
-    // En una aplicación real, esto verificaría la cita en Supabase
-    setTimeout(() => {
-      // Simulamos encontrar una cita
-      const citaEncontrada = {
-        id: '123456',
-        negocio: 'Peluquería Ejemplo',
-        servicio: 'Corte de pelo',
-        fecha: '2023-06-20',
-        hora_inicio: '10:00',
-        hora_fin: '10:30',
-        estado: 'aceptada',
-      };
+    try {
+      const result = await getCitaByTelefono(telefono.trim());
       
-      setCita(citaEncontrada);
-      setLoading(false);
-    }, 1000);
+      if (result.success && result.data.length > 0) {
+        setCitasEncontradas(result.data);
+      } else {
+        setCitasEncontradas([]);
+        toast({
+          title: "No se encontraron citas",
+          description: "No se encontraron citas asociadas a este número de teléfono.",
+        });
+      }
+    } catch (error) {
+      console.error('Error al verificar cita:', error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error al verificar la cita. Intenta de nuevo más tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const formatFecha = (fechaStr: string) => {
+    try {
+      return format(new Date(fechaStr), 'EEEE, d MMMM yyyy', { locale: es });
+    } catch (e) {
+      return fechaStr;
+    }
+  };
+  
+  const getEstadoLabel = (estado: string) => {
+    switch (estado) {
+      case 'pendiente':
+        return {
+          text: 'Pendiente de confirmación',
+          class: 'bg-yellow-100 text-yellow-800'
+        };
+      case 'aceptada':
+        return {
+          text: 'Confirmada',
+          class: 'bg-green-100 text-green-800'
+        };
+      case 'rechazada':
+        return {
+          text: 'Rechazada',
+          class: 'bg-red-100 text-red-800'
+        };
+      default:
+        return {
+          text: estado,
+          class: 'bg-gray-100 text-gray-800'
+        };
+    }
   };
 
   return (
-    <div className="container max-w-xl mx-auto px-4 py-8">
-      <Card>
-        <CardHeader className="text-center">
-          <CalendarSearch className="w-12 h-12 mx-auto text-reserva-primary mb-4" />
-          <CardTitle>Verificar estado de cita</CardTitle>
+    <div className="container max-w-4xl mx-auto px-4 py-8">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold">Verificar estado de tu cita</h1>
+        <p className="text-gray-600 mt-2">
+          Introduce tu número de teléfono para ver el estado de tus citas
+        </p>
+      </div>
+      
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center text-blue-700">
+            <Search className="mr-2 h-5 w-5" />
+            Buscar citas
+          </CardTitle>
           <CardDescription>
-            Introduce tu número de teléfono para verificar el estado de tu cita.
+            Introduce el número de teléfono con el que realizaste la reserva
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="telefono">Número de teléfono</Label>
-            <Input
-              id="telefono"
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
-              placeholder="Ej: +34612345678"
-              disabled={loading}
-            />
-            <p className="text-xs text-gray-500">
-              Introduce el número con el que realizaste la reserva.
-            </p>
-          </div>
-          
-          <Button 
-            className="w-full" 
-            onClick={handleVerificar}
-            disabled={loading}
-          >
-            {loading ? "Verificando..." : "Verificar Cita"}
-          </Button>
-          
-          {cita && (
-            <div className="mt-8 space-y-4 border-t pt-6">
-              <div className="flex justify-center">
-                {cita.estado === 'aceptada' ? (
-                  <div className="bg-green-100 p-3 rounded-full">
-                    <CheckCircle className="h-8 w-8 text-green-600" />
-                  </div>
-                ) : (
-                  <div className="bg-yellow-100 p-3 rounded-full">
-                    <Clock className="h-8 w-8 text-yellow-600" />
-                  </div>
-                )}
-              </div>
-              
-              <div className="text-center">
-                <h3 className="font-medium text-lg">
-                  Tu cita está {cita.estado === 'pendiente' ? 'pendiente de confirmación' : 
-                              cita.estado === 'aceptada' ? 'confirmada' : 
-                              'rechazada'}
-                </h3>
-              </div>
-              
-              <div className="bg-gray-50 p-4 rounded-md">
-                <h4 className="font-medium mb-2">Detalles de la cita</h4>
-                <div className="grid grid-cols-2 gap-y-2 text-sm">
-                  <p className="text-gray-600">Negocio:</p>
-                  <p>{cita.negocio}</p>
-                  
-                  <p className="text-gray-600">Servicio:</p>
-                  <p>{cita.servicio}</p>
-                  
-                  <p className="text-gray-600">Fecha:</p>
-                  <p>{new Date(cita.fecha).toLocaleDateString('es-ES')}</p>
-                  
-                  <p className="text-gray-600">Hora:</p>
-                  <p>{cita.hora_inicio} - {cita.hora_fin}</p>
-                  
-                  <p className="text-gray-600">Estado:</p>
-                  <p>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      cita.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 
-                      cita.estado === 'aceptada' ? 'bg-green-100 text-green-800' : 
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {cita.estado === 'pendiente' ? 'Pendiente' : 
-                      cita.estado === 'aceptada' ? 'Aceptada' : 
-                      'Rechazada'}
-                    </span>
-                  </p>
-                </div>
-              </div>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="telefono">Número de teléfono</Label>
+              <Input
+                id="telefono"
+                placeholder="Ej: +34612345678"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                className="max-w-md"
+              />
             </div>
-          )}
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Buscando...' : 'Buscar citas'}
+            </Button>
+          </form>
         </CardContent>
       </Card>
+      
+      {citasEncontradas.length > 0 && (
+        <div className="space-y-6">
+          <h2 className="text-2xl font-semibold">Citas encontradas</h2>
+          
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+            {citasEncontradas.map((cita, index) => {
+              const estadoInfo = getEstadoLabel(cita.estado);
+              
+              return (
+                <Card key={index} className="overflow-hidden">
+                  <div className={`h-2 ${cita.estado === 'aceptada' ? 'bg-green-500' : cita.estado === 'rechazada' ? 'bg-red-500' : 'bg-yellow-500'}`}></div>
+                  <CardHeader>
+                    <CardTitle>{cita.negocios?.nombre || 'Negocio'}</CardTitle>
+                    <CardDescription>{cita.servicios?.nombre || 'Servicio no especificado'}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-start space-x-3">
+                      <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
+                      <div>
+                        <div className="font-medium">Fecha</div>
+                        <div className="text-gray-600">{formatFecha(cita.fecha)}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <Clock className="h-5 w-5 text-gray-500 mt-0.5" />
+                      <div>
+                        <div className="font-medium">Hora</div>
+                        <div className="text-gray-600">{cita.hora_inicio} - {cita.hora_fin}</div>
+                      </div>
+                    </div>
+                    <div className="pt-2">
+                      <div className="font-medium mb-1">Estado</div>
+                      <span className={`inline-block px-3 py-1 text-sm rounded-full ${estadoInfo.class}`}>
+                        {estadoInfo.text}
+                      </span>
+                    </div>
+                  </CardContent>
+                  {cita.negocios?.slug && (
+                    <CardFooter className="border-t pt-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => navigate(`/${cita.negocios.slug}/cita`)}
+                        className="w-full"
+                      >
+                        Reservar otra cita en este negocio
+                      </Button>
+                    </CardFooter>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

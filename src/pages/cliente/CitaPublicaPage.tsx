@@ -23,166 +23,18 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from '@/components/ui/use-toast';
 import { CalendarRange, Clock, CheckCircle2, ChevronRight } from 'lucide-react';
+import { 
+  getNegocioBySlug,
+  getServiciosByNegocioId,
+  getHorariosDisponibles,
+  getDiasDisponibles,
+  createCita,
+  getCitaByTelefono
+} from '@/integrations/supabase/client';
+import { HorarioDisponible, DiaDisponible } from '@/types';
+import { format, isAfter, isBefore, addDays, addMonths } from 'date-fns';
+import { es } from 'date-fns/locale';
 
-// Mock data
-const mockNegocio = {
-  id: '1',
-  nombre: 'Peluquería Ejemplo',
-  slug: 'peluqueria-ejemplo',
-};
-
-const mockServicios = [
-  { id: '1', nombre: 'Corte de pelo', duracion_minutos: 30 },
-  { id: '2', nombre: 'Tinte', duracion_minutos: 60 },
-  { id: '3', nombre: 'Peinado', duracion_minutos: 45 },
-  { id: '4', nombre: 'Corte y afeitado', duracion_minutos: 45 },
-  { id: '5', nombre: 'Corte y peinado', duracion_minutos: 60 }
-];
-
-const mockHorariosRecurrentes = [
-  { id: '1', dia_semana: 'lunes', hora_inicio: '09:00', hora_fin: '14:00' },
-  { id: '2', dia_semana: 'lunes', hora_inicio: '16:00', hora_fin: '20:00' },
-  { id: '3', dia_semana: 'martes', hora_inicio: '09:00', hora_fin: '14:00' },
-  { id: '4', dia_semana: 'martes', hora_inicio: '16:00', hora_fin: '20:00' },
-  { id: '5', dia_semana: 'miércoles', hora_inicio: '09:00', hora_fin: '14:00' },
-  { id: '6', dia_semana: 'miércoles', hora_inicio: '16:00', hora_fin: '20:00' },
-  { id: '7', dia_semana: 'jueves', hora_inicio: '09:00', hora_fin: '14:00' },
-  { id: '8', dia_semana: 'jueves', hora_inicio: '16:00', hora_fin: '20:00' },
-  { id: '9', dia_semana: 'viernes', hora_inicio: '09:00', hora_fin: '14:00' },
-  { id: '10', dia_semana: 'viernes', hora_inicio: '16:00', hora_fin: '20:00' },
-  { id: '11', dia_semana: 'sábado', hora_inicio: '10:00', hora_fin: '14:00' }
-];
-
-const mockHorasBloqueadas = [
-  { id: '1', fecha: '2023-06-15', hora_inicio: '11:00', hora_fin: '12:00' },
-  { id: '2', fecha: '2023-06-16', hora_inicio: '16:00', hora_fin: '17:30' }
-];
-
-const mockCitas = [
-  { 
-    id: '1', 
-    fecha: '2023-06-15', 
-    hora_inicio: '10:00', 
-    hora_fin: '10:45',
-    estado: 'pendiente'
-  },
-  { 
-    id: '2', 
-    fecha: '2023-06-15', 
-    hora_inicio: '12:30', 
-    hora_fin: '13:30',
-    estado: 'aceptada'
-  },
-];
-
-// Funciones auxiliares
-const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-
-const obtenerDiaSemana = (fecha: Date) => {
-  return diasSemana[fecha.getDay()];
-};
-
-const formatearFecha = (fecha: Date) => {
-  return fecha.toISOString().split('T')[0];
-};
-
-const genererHorasDisponibles = (fecha: Date, servicioId: string) => {
-  const diaSemana = obtenerDiaSemana(fecha);
-  const fechaFormateada = formatearFecha(fecha);
-  const servicio = mockServicios.find(s => s.id === servicioId);
-  
-  if (!servicio) return [];
-  
-  // Obtener horarios del día de la semana
-  const horariosDelDia = mockHorariosRecurrentes.filter(h => h.dia_semana === diaSemana);
-  
-  if (horariosDelDia.length === 0) return [];
-  
-  // Obtener horas bloqueadas para la fecha
-  const horasBloqueadas = mockHorasBloqueadas.filter(h => h.fecha === fechaFormateada);
-  
-  // Obtener citas existentes para la fecha
-  const citasFecha = mockCitas.filter(c => c.fecha === fechaFormateada);
-  
-  // Generar slots de 15 minutos dentro de los horarios del día
-  const slots = [];
-  
-  for (const horario of horariosDelDia) {
-    let [horaInicio, minutoInicio] = horario.hora_inicio.split(':').map(Number);
-    const [horaFin, minutoFin] = horario.hora_fin.split(':').map(Number);
-    
-    while (
-      horaInicio < horaFin || 
-      (horaInicio === horaFin && minutoInicio < minutoFin)
-    ) {
-      const horaFormateada = `${String(horaInicio).padStart(2, '0')}:${String(minutoInicio).padStart(2, '0')}`;
-      
-      // Calcular hora fin del servicio
-      const minutosTotales = horaInicio * 60 + minutoInicio + servicio.duracion_minutos;
-      const horaFinServicio = Math.floor(minutosTotales / 60);
-      const minutoFinServicio = minutosTotales % 60;
-      const horaFinFormateada = `${String(horaFinServicio).padStart(2, '0')}:${String(minutoFinServicio).padStart(2, '0')}`;
-      
-      // Comprobar si el slot completo está dentro del horario
-      const slotDentroDeHorario = 
-        horaFinServicio < horaFin || 
-        (horaFinServicio === horaFin && minutoFinServicio <= minutoFin);
-      
-      // Comprobar si el slot se solapa con horas bloqueadas
-      const seSolapaConBloqueadas = horasBloqueadas.some(bloqueo => {
-        const [hbInicio, mbInicio] = bloqueo.hora_inicio.split(':').map(Number);
-        const [hbFin, mbFin] = bloqueo.hora_fin.split(':').map(Number);
-        
-        const bloqueInicio = hbInicio * 60 + mbInicio;
-        const bloqueFin = hbFin * 60 + mbFin;
-        const slotInicio = horaInicio * 60 + minutoInicio;
-        const slotFin = horaFinServicio * 60 + minutoFinServicio;
-        
-        return (
-          (slotInicio < bloqueFin && slotInicio >= bloqueInicio) ||
-          (slotFin > bloqueInicio && slotFin <= bloqueFin) ||
-          (slotInicio <= bloqueInicio && slotFin >= bloqueFin)
-        );
-      });
-      
-      // Comprobar si el slot se solapa con citas existentes
-      const seSolapaConCitas = citasFecha.some(cita => {
-        const [hcInicio, mcInicio] = cita.hora_inicio.split(':').map(Number);
-        const [hcFin, mcFin] = cita.hora_fin.split(':').map(Number);
-        
-        const citaInicio = hcInicio * 60 + mcInicio;
-        const citaFin = hcFin * 60 + mcFin;
-        const slotInicio = horaInicio * 60 + minutoInicio;
-        const slotFin = horaFinServicio * 60 + minutoFinServicio;
-        
-        return (
-          (slotInicio < citaFin && slotInicio >= citaInicio) ||
-          (slotFin > citaInicio && slotFin <= citaFin) ||
-          (slotInicio <= citaInicio && slotFin >= citaFin)
-        );
-      });
-      
-      // Si el slot es válido, añadirlo a la lista
-      if (slotDentroDeHorario && !seSolapaConBloqueadas && !seSolapaConCitas) {
-        slots.push({
-          hora_inicio: horaFormateada,
-          hora_fin: horaFinFormateada
-        });
-      }
-      
-      // Avanzar 15 minutos
-      minutoInicio += 15;
-      if (minutoInicio >= 60) {
-        horaInicio += Math.floor(minutoInicio / 60);
-        minutoInicio %= 60;
-      }
-    }
-  }
-  
-  return slots;
-};
-
-// Componente principal
 const CitaPublicaPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const [negocio, setNegocio] = useState<any>(null);
@@ -195,27 +47,115 @@ const CitaPublicaPage = () => {
     hora_inicio: '',
   });
   const [servicios, setServicios] = useState<any[]>([]);
-  const [horasDisponibles, setHorasDisponibles] = useState<any[]>([]);
+  const [horasDisponibles, setHorasDisponibles] = useState<HorarioDisponible[]>([]);
+  const [diasDisponibles, setDiasDisponibles] = useState<DiaDisponible[]>([]);
   const [success, setSuccess] = useState(false);
   const [citaId, setCitaId] = useState<string | null>(null);
   const [verificarDialogOpen, setVerificarDialogOpen] = useState(false);
   const [telefono, setTelefono] = useState('');
-  const [cita, setCita] = useState<any | null>(null);
+  const [citasEncontradas, setCitasEncontradas] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   
-  // En una aplicación real, esto obtendría los datos de Supabase
+  const hoy = new Date();
+  const limiteMaximo = addMonths(hoy, 2);
+
   useEffect(() => {
-    // Simular carga de datos
-    setNegocio(mockNegocio);
-    setServicios(mockServicios);
-  }, [slug]);
+    const cargarDatos = async () => {
+      try {
+        setIsLoading(true);
+        
+        if (!slug) {
+          console.error('No se encontró slug en la URL');
+          toast({
+            title: "Error",
+            description: "URL inválida. No se pudo identificar el negocio.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Cargar datos del negocio
+        const negocioResult = await getNegocioBySlug(slug);
+        
+        if (!negocioResult.success || !negocioResult.data) {
+          toast({
+            title: "Error",
+            description: "No se encontró el negocio solicitado.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        setNegocio(negocioResult.data);
+        
+        // Cargar servicios del negocio
+        const serviciosResult = await getServiciosByNegocioId(negocioResult.data.id);
+        
+        if (serviciosResult.success) {
+          setServicios(serviciosResult.data.filter((s: any) => s.activo));
+        } else {
+          console.error('Error al cargar servicios:', serviciosResult.message);
+        }
+        
+        // Cargar días disponibles para el mes actual
+        const anioActual = hoy.getFullYear();
+        const mesActual = hoy.getMonth() + 1;
+        
+        const diasDispResult = await getDiasDisponibles(negocioResult.data.id, anioActual, mesActual);
+        
+        if (diasDispResult.success) {
+          setDiasDisponibles(diasDispResult.data);
+        } else {
+          console.error('Error al cargar días disponibles:', diasDispResult.message);
+        }
+        
+      } catch (error) {
+        console.error('Error al cargar datos:', error);
+        toast({
+          title: "Error",
+          description: "Ocurrió un error al cargar los datos. Intenta de nuevo más tarde.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    cargarDatos();
+  }, [slug, toast]);
   
   useEffect(() => {
-    if (formData.servicio_id && formData.fecha) {
-      const horas = genererHorasDisponibles(formData.fecha, formData.servicio_id);
-      setHorasDisponibles(horas);
-    }
-  }, [formData.servicio_id, formData.fecha]);
+    const cargarHorasDisponibles = async () => {
+      if (!negocio?.id || !formData.servicio_id || !formData.fecha) return;
+      
+      try {
+        const servicio = servicios.find(s => s.id === formData.servicio_id);
+        
+        if (!servicio) return;
+        
+        const fechaFormateada = format(formData.fecha, 'yyyy-MM-dd');
+        
+        const result = await getHorariosDisponibles(
+          negocio.id,
+          fechaFormateada,
+          servicio.duracion_minutos
+        );
+        
+        if (result.success) {
+          setHorasDisponibles(result.data.filter((h: HorarioDisponible) => h.disponible));
+        } else {
+          console.error('Error al cargar horas disponibles:', result.message);
+          setHorasDisponibles([]);
+        }
+      } catch (error) {
+        console.error('Error al cargar horas disponibles:', error);
+        setHorasDisponibles([]);
+      }
+    };
+    
+    cargarHorasDisponibles();
+  }, [formData.servicio_id, formData.fecha, negocio?.id, servicios]);
 
   const handleServicioChange = (servicioId: string) => {
     setFormData(prev => ({
@@ -276,7 +216,7 @@ const CitaPublicaPage = () => {
     setStep(prevStep => prevStep - 1);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.nombre_cliente || !formData.telefono_cliente) {
@@ -288,60 +228,94 @@ const CitaPublicaPage = () => {
       return;
     }
     
-    // En una aplicación real, esto enviaría los datos a Supabase
-    
-    // Simular creación de cita
-    const servicio = servicios.find(s => s.id === formData.servicio_id);
-    if (!servicio) return;
-    
-    const minutosTotales = formData.hora_inicio.split(':').map(Number).reduce((acc, val, i) => acc + (i === 0 ? val * 60 : val), 0) + servicio.duracion_minutos;
-    
-    const horaFin = `${String(Math.floor(minutosTotales / 60)).padStart(2, '0')}:${String(minutosTotales % 60).padStart(2, '0')}`;
-    
-    const nuevaCita = {
-      id: Math.random().toString(36).substring(2, 11),
-      negocio_id: negocio.id,
-      nombre_cliente: formData.nombre_cliente,
-      telefono_cliente: formData.telefono_cliente,
-      servicio_id: formData.servicio_id,
-      servicio: servicio.nombre,
-      fecha: formatearFecha(formData.fecha),
-      hora_inicio: formData.hora_inicio,
-      hora_fin: horaFin,
-      estado: 'pendiente',
-      creada_en: new Date().toISOString()
-    };
-    
-    setCitaId(nuevaCita.id);
-    setCita(nuevaCita);
-    setSuccess(true);
-  };
-
-  const handleVerificarCita = () => {
-    // En una aplicación real, esto verificaría la cita en Supabase
-    if (telefono && telefono.trim()) {
-      // Simulamos encontrar una cita
-      const citaEncontrada = {
-        id: '123456',
-        negocio: 'Peluquería Ejemplo',
-        servicio: 'Corte de pelo',
-        fecha: '2023-06-20',
-        hora_inicio: '10:00',
-        hora_fin: '10:30',
-        estado: 'pendiente',
+    try {
+      const servicio = servicios.find(s => s.id === formData.servicio_id);
+      if (!servicio || !negocio) return;
+      
+      // Calcular hora fin basada en la duración del servicio
+      const [horas, minutos] = formData.hora_inicio.split(':').map(Number);
+      const totalMinutos = horas * 60 + minutos + servicio.duracion_minutos;
+      const horaFin = `${String(Math.floor(totalMinutos / 60)).padStart(2, '0')}:${String(totalMinutos % 60).padStart(2, '0')}`;
+      
+      const nuevaCita = {
+        negocio_id: negocio.id,
+        nombre_cliente: formData.nombre_cliente,
+        telefono_cliente: formData.telefono_cliente,
+        servicio_id: formData.servicio_id,
+        fecha: format(formData.fecha, 'yyyy-MM-dd'),
+        hora_inicio: formData.hora_inicio,
+        hora_fin: horaFin,
+        estado: 'pendiente'
       };
       
-      setCita(citaEncontrada);
-    } else {
+      const result = await createCita(nuevaCita);
+      
+      if (result.success) {
+        setCitaId(result.data.id);
+        setSuccess(true);
+        
+        toast({
+          title: "¡Cita creada!",
+          description: "Tu solicitud de cita ha sido registrada correctamente.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Ha ocurrido un error al crear la cita.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error al crear cita:', error);
       toast({
         title: "Error",
-        description: "Por favor, introduce un número de teléfono.",
+        description: "Ocurrió un error al crear la cita. Intenta de nuevo más tarde.",
         variant: "destructive",
       });
     }
   };
 
-  if (!negocio) {
+  const handleVerificarCita = async () => {
+    if (!telefono || !telefono.trim()) {
+      toast({
+        title: "Error",
+        description: "Por favor, introduce un número de teléfono.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const result = await getCitaByTelefono(telefono.trim());
+      
+      if (result.success && result.data.length > 0) {
+        setCitasEncontradas(result.data);
+      } else {
+        setCitasEncontradas([]);
+        toast({
+          title: "No se encontraron citas",
+          description: "No se encontraron citas asociadas a este número de teléfono.",
+        });
+      }
+    } catch (error) {
+      console.error('Error al verificar cita:', error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error al verificar la cita. Intenta de nuevo más tarde.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatFecha = (fechaStr: string) => {
+    try {
+      return format(new Date(fechaStr), 'dd/MM/yyyy');
+    } catch (e) {
+      return fechaStr;
+    }
+  };
+
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center">
@@ -351,7 +325,27 @@ const CitaPublicaPage = () => {
     );
   }
 
+  if (!negocio) {
+    return (
+      <div className="container max-w-xl mx-auto px-4 py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">Negocio no encontrado</CardTitle>
+            <CardDescription>
+              El negocio que buscas no existe o la URL es incorrecta.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p>Por favor, verifica la dirección o contacta con el negocio para obtener la URL correcta.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (success) {
+    const servicioSeleccionado = servicios.find(s => s.id === formData.servicio_id);
+    
     return (
       <div className="container max-w-xl mx-auto px-4 py-8">
         <Card className="mb-8">
@@ -367,14 +361,14 @@ const CitaPublicaPage = () => {
               <div>
                 <h3 className="text-lg font-medium">{negocio.nombre}</h3>
                 <p className="text-gray-500">
-                  <span className="font-medium">Servicio:</span> {servicios.find(s => s.id === formData.servicio_id)?.nombre}
+                  <span className="font-medium">Servicio:</span> {servicioSeleccionado?.nombre}
                 </p>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Fecha</p>
-                  <p>{formData.fecha.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                  <p>{format(formData.fecha, 'EEEE, d MMMM yyyy', { locale: es })}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-500">Hora</p>
@@ -438,15 +432,15 @@ const CitaPublicaPage = () => {
           {/* Indicador de pasos */}
           <div className="flex justify-center mb-8">
             <div className="flex items-center">
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 1 ? 'bg-reserva-primary text-white' : 'bg-gray-200 text-gray-600'}`}>
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
                 1
               </div>
-              <div className={`w-16 h-1 ${step >= 2 ? 'bg-reserva-primary' : 'bg-gray-200'}`}></div>
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 2 ? 'bg-reserva-primary text-white' : 'bg-gray-200 text-gray-600'}`}>
+              <div className={`w-16 h-1 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
                 2
               </div>
-              <div className={`w-16 h-1 ${step >= 3 ? 'bg-reserva-primary' : 'bg-gray-200'}`}></div>
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 3 ? 'bg-reserva-primary text-white' : 'bg-gray-200 text-gray-600'}`}>
+              <div className={`w-16 h-1 ${step >= 3 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
                 3
               </div>
             </div>
@@ -458,31 +452,37 @@ const CitaPublicaPage = () => {
               <h2 className="text-xl font-medium text-center">Selecciona un servicio</h2>
               
               <div className="space-y-4">
-                {servicios.map(servicio => (
-                  <div
-                    key={servicio.id}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                      formData.servicio_id === servicio.id
-                        ? 'border-reserva-primary bg-blue-50'
-                        : 'hover:border-gray-400'
-                    }`}
-                    onClick={() => handleServicioChange(servicio.id)}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="font-medium">{servicio.nombre}</h3>
-                        <p className="text-sm text-gray-500">Duración: {servicio.duracion_minutos} minutos</p>
-                      </div>
-                      {formData.servicio_id === servicio.id && (
-                        <CheckCircle2 className="h-5 w-5 text-reserva-primary" />
-                      )}
-                    </div>
+                {servicios.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No hay servicios disponibles en este momento.</p>
                   </div>
-                ))}
+                ) : (
+                  servicios.map(servicio => (
+                    <div
+                      key={servicio.id}
+                      className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                        formData.servicio_id === servicio.id
+                          ? 'border-blue-600 bg-blue-50'
+                          : 'hover:border-gray-400'
+                      }`}
+                      onClick={() => handleServicioChange(servicio.id)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="font-medium">{servicio.nombre}</h3>
+                          <p className="text-sm text-gray-500">Duración: {servicio.duracion_minutos} minutos</p>
+                        </div>
+                        {formData.servicio_id === servicio.id && (
+                          <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
               
               <div className="flex justify-end">
-                <Button onClick={handleNext}>
+                <Button onClick={handleNext} disabled={!formData.servicio_id || servicios.length === 0}>
                   Siguiente
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -504,16 +504,20 @@ const CitaPublicaPage = () => {
                       selected={formData.fecha}
                       onSelect={handleFechaChange}
                       disabled={(date) => {
+                        // Deshabilitar fechas pasadas y más de 2 meses en el futuro
                         const today = new Date();
                         today.setHours(0, 0, 0, 0);
                         
-                        // Deshabilitar fechas pasadas y más de 2 meses en el futuro
-                        const twoMonthsFromNow = new Date();
-                        twoMonthsFromNow.setMonth(twoMonthsFromNow.getMonth() + 2);
+                        if (isBefore(date, today) || isAfter(date, limiteMaximo)) {
+                          return true;
+                        }
                         
-                        return date < today || date > twoMonthsFromNow || 
-                          // Deshabilitar domingos
-                          date.getDay() === 0;
+                        // Verificar disponibilidad según los días disponibles
+                        const dateStr = format(date, 'yyyy-MM-dd');
+                        const diaDisponible = diasDisponibles.find(d => d.fecha === dateStr);
+                        
+                        // Si no hay información o no está disponible, deshabilitar
+                        return diaDisponible ? !diaDisponible.tiene_disponibilidad : true;
                       }}
                     />
                   </div>
@@ -537,7 +541,7 @@ const CitaPublicaPage = () => {
                             key={index}
                             className={`p-2 border rounded text-center cursor-pointer transition-colors ${
                               formData.hora_inicio === hora.hora_inicio
-                                ? 'border-reserva-primary bg-blue-50'
+                                ? 'border-blue-600 bg-blue-50'
                                 : 'hover:border-gray-400'
                             }`}
                             onClick={() => handleHoraChange(hora.hora_inicio)}
@@ -603,7 +607,7 @@ const CitaPublicaPage = () => {
                     <p>{servicios.find(s => s.id === formData.servicio_id)?.nombre}</p>
                     
                     <p className="text-gray-600">Fecha:</p>
-                    <p>{formData.fecha.toLocaleDateString('es-ES')}</p>
+                    <p>{format(formData.fecha, 'dd/MM/yyyy')}</p>
                     
                     <p className="text-gray-600">Hora:</p>
                     <p>{formData.hora_inicio}</p>
@@ -655,48 +659,56 @@ const CitaPublicaPage = () => {
               />
             </div>
             
-            {cita && (
-              <div className="border rounded-md p-4 bg-gray-50">
-                <h3 className="font-medium mb-2">Detalles de tu cita</h3>
-                <div className="grid grid-cols-2 gap-y-2 text-sm">
-                  <p className="text-gray-600">Servicio:</p>
-                  <p>{cita.servicio}</p>
-                  
-                  <p className="text-gray-600">Fecha:</p>
-                  <p>{new Date(cita.fecha).toLocaleDateString('es-ES')}</p>
-                  
-                  <p className="text-gray-600">Hora:</p>
-                  <p>{cita.hora_inicio} - {cita.hora_fin}</p>
-                  
-                  <p className="text-gray-600">Estado:</p>
-                  <p>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      cita.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 
-                      cita.estado === 'aceptada' ? 'bg-green-100 text-green-800' : 
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {cita.estado === 'pendiente' ? 'Pendiente' : 
-                      cita.estado === 'aceptada' ? 'Aceptada' : 
-                      'Rechazada'}
-                    </span>
-                  </p>
-                </div>
+            {citasEncontradas.length > 0 && (
+              <div className="space-y-3 mt-4">
+                <h3 className="font-medium">Citas encontradas:</h3>
+                
+                {citasEncontradas.map((cita, index) => (
+                  <div key={index} className="border rounded-md p-4 bg-gray-50">
+                    <div className="grid grid-cols-2 gap-y-2 text-sm">
+                      <p className="text-gray-600">Negocio:</p>
+                      <p>{cita.negocios?.nombre || 'No especificado'}</p>
+                      
+                      <p className="text-gray-600">Servicio:</p>
+                      <p>{cita.servicios?.nombre || 'No especificado'}</p>
+                      
+                      <p className="text-gray-600">Fecha:</p>
+                      <p>{formatFecha(cita.fecha)}</p>
+                      
+                      <p className="text-gray-600">Hora:</p>
+                      <p>{cita.hora_inicio} - {cita.hora_fin}</p>
+                      
+                      <p className="text-gray-600">Estado:</p>
+                      <p>
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          cita.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' : 
+                          cita.estado === 'aceptada' ? 'bg-green-100 text-green-800' : 
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {cita.estado === 'pendiente' ? 'Pendiente' : 
+                           cita.estado === 'aceptada' ? 'Aceptada' : 
+                           'Rechazada'}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
           
           <DialogFooter>
-            {!cita && (
+            {citasEncontradas.length === 0 && (
               <Button onClick={handleVerificarCita}>
                 Verificar
               </Button>
             )}
             <Button variant="outline" onClick={() => {
               setVerificarDialogOpen(false);
-              setCita(null);
+              setCitasEncontradas([]);
               setTelefono('');
             }}>
-              {cita ? 'Cerrar' : 'Cancelar'}
+              {citasEncontradas.length > 0 ? 'Cerrar' : 'Cancelar'}
             </Button>
           </DialogFooter>
         </DialogContent>
