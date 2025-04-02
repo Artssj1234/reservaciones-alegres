@@ -50,7 +50,9 @@ const RegistroPage = () => {
     setIsLoading(true);
     
     try {
-      // Enviar datos a Supabase
+      console.log("Enviando datos a Supabase:", formData);
+      
+      // Enviar datos a Supabase (ahora sin RLS)
       const { data, error } = await supabase
         .from('solicitudes_negocio')
         .insert([
@@ -67,9 +69,12 @@ const RegistroPage = () => {
         .select();
 
       if (error) {
+        console.error("Error al enviar solicitud:", error);
         throw error;
       }
 
+      console.log("Respuesta de Supabase:", data);
+      
       toast({
         title: "Solicitud enviada",
         description: "Hemos recibido tu solicitud. Te contactaremos pronto.",
@@ -77,12 +82,12 @@ const RegistroPage = () => {
       
       setSuccess(true);
     } catch (error: any) {
+      console.error("Error detallado:", error);
       toast({
         title: "Error",
         description: error.message || "Ha ocurrido un error. Inténtalo de nuevo.",
         variant: "destructive",
       });
-      console.error("Error de registro:", error);
     } finally {
       setIsLoading(false);
     }
