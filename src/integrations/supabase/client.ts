@@ -28,6 +28,17 @@ export interface BusinessResponse {
   business?: any;
 }
 
+export interface BusinessStatsResponse {
+  success: boolean;
+  message?: string;
+  stats?: {
+    citas_hoy: number;
+    citas_pendientes: number;
+    servicios: number;
+    clientes_total: number;
+  };
+}
+
 // Type guard functions to check if the response has the expected structure
 function isLoginResponse(obj: any): obj is LoginResponse {
   return obj && typeof obj === 'object' && 'success' in obj;
@@ -35,6 +46,10 @@ function isLoginResponse(obj: any): obj is LoginResponse {
 
 function isBusinessResponse(obj: any): obj is BusinessResponse {
   return obj && typeof obj === 'object' && 'success' in obj;
+}
+
+function isBusinessStatsResponse(obj: any): obj is BusinessStatsResponse {
+  return obj && typeof obj === 'object' && 'success' in obj && obj.stats !== undefined;
 }
 
 // Custom login function that uses our database function
@@ -101,6 +116,30 @@ export const getBusinessByUserId = async (userId: string): Promise<BusinessRespo
   
   console.error('Formato de respuesta inesperado:', data);
   return { success: false, message: 'Error desconocido: formato de respuesta inválido' };
+};
+
+// Función para obtener estadísticas del negocio
+export const getNegocioStats = async (negocioId: string): Promise<BusinessStatsResponse> => {
+  console.log('Obteniendo estadísticas para negocio ID:', negocioId);
+  
+  const { data, error } = await supabase.rpc("get_estadisticas_negocio", {
+    p_negocio_id: negocioId
+  });
+  
+  if (error) {
+    console.error('Error al obtener estadísticas:', error);
+    return { success: false, message: error.message };
+  }
+  
+  return { 
+    success: true, 
+    stats: data as {
+      citas_hoy: number;
+      citas_pendientes: number;
+      servicios: number;
+      clientes_total: number;
+    }
+  };
 };
 
 // Funciones para obtener datos de las distintas entidades del negocio
@@ -387,12 +426,18 @@ export const deleteHoraBloqueada = async (id: string) => {
 export const updateNegocioPerfil = async (id: string, datos: any) => {
   console.log('Actualizando perfil del negocio:', id, datos);
   
-  const { data, error } = await supabase
-    .from('negocios')
-    .update(datos)
-    .eq('id', id)
-    .select('*')
-    .single();
+  const { data, error } = await supabase.rpc(
+    "update_negocio_profile",
+    {
+      p_negocio_id: id,
+      p_nombre: datos.nombre,
+      p_descripcion: datos.descripcion,
+      p_direccion: datos.direccion,
+      p_telefono: datos.telefono,
+      p_correo: datos.correo,
+      p_sitio_web: datos.sitio_web
+    }
+  );
   
   if (error) {
     console.error('Error al actualizar perfil:', error);

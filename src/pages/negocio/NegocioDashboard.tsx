@@ -9,7 +9,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { 
   getCitasHoyByNegocioId, 
   getCitasPendientesByNegocioId, 
-  getServiciosByNegocioId 
+  getServiciosByNegocioId,
+  getNegocioStats
 } from '@/integrations/supabase/client';
 
 const NegocioDashboard = () => {
@@ -19,6 +20,17 @@ const NegocioDashboard = () => {
   const [citasHoy, setCitasHoy] = useState<any[]>([]);
   const [citasPendientes, setCitasPendientes] = useState<any[]>([]);
   const [servicios, setServicios] = useState<any[]>([]);
+  const [estadisticas, setEstadisticas] = useState<{
+    citas_hoy: number;
+    citas_pendientes: number;
+    servicios: number;
+    clientes_total: number;
+  }>({
+    citas_hoy: 0,
+    citas_pendientes: 0,
+    servicios: 0,
+    clientes_total: 0
+  });
 
   const negocioId = auth.negocio?.id;
   const negocioNombre = auth.negocio?.nombre || 'Mi Negocio';
@@ -42,10 +54,11 @@ const NegocioDashboard = () => {
         setLoading(true);
         
         // Cargar todos los datos de manera paralela
-        const [citasHoyResult, citasPendientesResult, serviciosResult] = await Promise.all([
+        const [citasHoyResult, citasPendientesResult, serviciosResult, statsResult] = await Promise.all([
           getCitasHoyByNegocioId(negocioId),
           getCitasPendientesByNegocioId(negocioId),
-          getServiciosByNegocioId(negocioId)
+          getServiciosByNegocioId(negocioId),
+          getNegocioStats(negocioId)
         ]);
 
         if (citasHoyResult.success) {
@@ -64,6 +77,12 @@ const NegocioDashboard = () => {
           setServicios(serviciosResult.data);
         } else {
           console.error('Error al cargar servicios:', serviciosResult.message);
+        }
+        
+        if (statsResult.success && statsResult.stats) {
+          setEstadisticas(statsResult.stats);
+        } else {
+          console.error('Error al cargar estadísticas:', statsResult.message);
         }
 
       } catch (error) {
@@ -103,7 +122,13 @@ const NegocioDashboard = () => {
         <h1 className="text-3xl font-bold">Panel de {negocioNombre}</h1>
         
         <div className="flex space-x-2">
-          <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(shareUrl)}>
+          <Button variant="outline" size="sm" onClick={() => {
+            navigator.clipboard.writeText(shareUrl);
+            toast({
+              title: "Enlace copiado",
+              description: "El enlace de reservas ha sido copiado al portapapeles.",
+            });
+          }}>
             Copiar enlace de reservas
           </Button>
           <Button variant="outline" size="sm" asChild>
@@ -123,7 +148,7 @@ const NegocioDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{loading ? '...' : citasHoy.length}</div>
+              <div className="text-2xl font-bold">{loading ? '...' : estadisticas.citas_hoy}</div>
               <CalendarIcon className="h-5 w-5 text-muted-foreground" />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -144,7 +169,7 @@ const NegocioDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{loading ? '...' : citasPendientes.length}</div>
+              <div className="text-2xl font-bold">{loading ? '...' : estadisticas.citas_pendientes}</div>
               <Clock className="h-5 w-5 text-muted-foreground" />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -165,7 +190,7 @@ const NegocioDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{loading ? '...' : servicios.length}</div>
+              <div className="text-2xl font-bold">{loading ? '...' : estadisticas.servicios}</div>
               <Settings className="h-5 w-5 text-muted-foreground" />
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -186,7 +211,7 @@ const NegocioDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <div className="text-2xl font-bold">{loading ? '...' : '0'}</div>
+              <div className="text-2xl font-bold">{loading ? '...' : estadisticas.clientes_total}</div>
               <Users className="h-5 w-5 text-muted-foreground" />
             </div>
             <p className="text-xs text-muted-foreground mt-1">

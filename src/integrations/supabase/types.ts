@@ -101,6 +101,47 @@ export type Database = {
           },
         ]
       }
+      clientes: {
+        Row: {
+          creado_en: string | null
+          email: string | null
+          id: string
+          negocio_id: string | null
+          nombre: string
+          num_citas: number | null
+          telefono: string
+          ultima_cita: string | null
+        }
+        Insert: {
+          creado_en?: string | null
+          email?: string | null
+          id?: string
+          negocio_id?: string | null
+          nombre: string
+          num_citas?: number | null
+          telefono: string
+          ultima_cita?: string | null
+        }
+        Update: {
+          creado_en?: string | null
+          email?: string | null
+          id?: string
+          negocio_id?: string | null
+          nombre?: string
+          num_citas?: number | null
+          telefono?: string
+          ultima_cita?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       horarios_recurrentes: {
         Row: {
           dia_semana: string
@@ -316,6 +357,70 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      get_citas_hoy: {
+        Args: {
+          p_negocio_id: string
+        }
+        Returns: {
+          id: string
+          nombre_cliente: string
+          telefono_cliente: string
+          servicio_nombre: string
+          servicio_duracion: number
+          fecha: string
+          hora_inicio: string
+          hora_fin: string
+          estado: string
+        }[]
+      }
+      get_citas_pendientes: {
+        Args: {
+          p_negocio_id: string
+        }
+        Returns: {
+          id: string
+          nombre_cliente: string
+          telefono_cliente: string
+          servicio_nombre: string
+          fecha: string
+          hora_inicio: string
+          hora_fin: string
+          estado: string
+        }[]
+      }
+      get_estadisticas_negocio: {
+        Args: {
+          p_negocio_id: string
+        }
+        Returns: Json
+      }
+      update_negocio_profile: {
+        Args: {
+          p_negocio_id: string
+          p_nombre: string
+          p_descripcion: string
+          p_direccion: string
+          p_telefono: string
+          p_correo: string
+          p_sitio_web: string
+        }
+        Returns: {
+          creado_en: string | null
+          id: string
+          nombre: string
+          slug: string
+          usuario_id: string | null
+        }[]
+      }
+      verificar_disponibilidad: {
+        Args: {
+          p_negocio_id: string
+          p_fecha: string
+          p_hora_inicio: string
+          p_hora_fin: string
+        }
+        Returns: boolean
       }
     }
     Enums: {
