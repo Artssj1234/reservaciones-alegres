@@ -45,6 +45,7 @@ const CitaPublicaPage = () => {
     horasDisponibles,
     diasSeleccionablesMes,
     cargandoHorarios,
+    isLoading: isLoadingDisponibilidad,
     handleMonthChange
   } = useDisponibilidad(negocio?.id, formData.servicio_id, formData.fecha);
 
@@ -109,7 +110,7 @@ const CitaPublicaPage = () => {
             selectedTime={formData.hora_inicio}
             diasSeleccionablesMes={diasSeleccionablesMes}
             horasDisponibles={horasDisponibles}
-            cargandoHorarios={cargandoHorarios}
+            cargandoHorarios={cargandoHorarios || isLoadingDisponibilidad}
             duracionServicio={selectedService?.duracion_minutos || 30}
             onDateChange={handleFechaChange}
             onTimeChange={handleHoraChange}
