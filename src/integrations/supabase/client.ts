@@ -470,53 +470,41 @@ export const updateUserPassword = async (id: string, nuevaContrasena: string) =>
   return { success: true, data };
 };
 
-// Nuevas funciones para obtener horarios disponibles para los clientes
-export const getHorariosDisponibles = async (negocioId: string, fecha: string, duracionMinutos: number = 0, servicioId?: string): Promise<{ success: boolean; message?: string; data: HorarioDisponible[] }> => {
-  console.log('Obteniendo horarios disponibles para negocio ID:', negocioId, 'en fecha:', fecha, 'para servicio ID:', servicioId || 'undefined');
-  
+export const getHorariosDisponibles = async (
+  negocioId: string,
+  fecha: string,
+  servicioId: string
+): Promise<{ success: boolean; message?: string; data: HorarioDisponible[] }> => {
+  console.log('Obteniendo horarios disponibles para negocio ID:', negocioId, 'en fecha:', fecha, 'para servicio ID:', servicioId);
+
   try {
-    const params: { 
-      p_negocio_id: string; 
-      p_fecha: string; 
-      p_duracion_minutos: number;
-      p_servicio_id?: string;
-    } = {
-      p_negocio_id: negocioId,
-      p_fecha: fecha,
-      p_duracion_minutos: duracionMinutos
-    };
-    
-    // Añadir el servicio_id solo si está definido y no es una cadena vacía
-    if (servicioId && servicioId.trim() !== '') {
-      params.p_servicio_id = servicioId;
-    }
-    
-    console.log('Parámetros enviados para obtener horarios:', params);
-    
     const { data, error } = await supabase.rpc(
       "obtener_horarios_disponibles",
-      params
-    ) as { data: HorarioDisponible[] | null, error: any };
-    
+      {
+        p_negocio_id: negocioId,
+        p_fecha: fecha,
+        p_servicio_id: servicioId
+      }
+    ) as { data: HorarioDisponible[] | null; error: any };
+
     if (error) {
       console.error('Error al obtener horarios disponibles:', error);
       return { success: false, message: error.message, data: [] };
     }
-    
-    // Asegurarnos de que los datos sean del tipo correcto
+
     const horarios: HorarioDisponible[] = Array.isArray(data) ? data : [];
-    
-    // Agregar logs detallados
+
     console.log(`Horarios disponibles recibidos: ${horarios.length} slots`);
     console.log('Disponibles:', horarios.filter(h => h.disponible).length);
     console.log('No disponibles:', horarios.filter(h => !h.disponible).length);
-    
+
     return { success: true, data: horarios };
   } catch (err) {
     console.error('Error en getHorariosDisponibles:', err);
     return { success: false, message: 'Error al procesar la solicitud', data: [] };
   }
 };
+
 
 export const getDiasDisponibles = async (negocioId: string, anio: number, mes: number, servicioId?: string): Promise<{ success: boolean; message?: string; data: DiaDisponible[] }> => {
   console.log('Obteniendo días disponibles para negocio ID:', negocioId, 'en año:', anio, 'mes:', mes, 'servicio:', servicioId || 'undefined');
