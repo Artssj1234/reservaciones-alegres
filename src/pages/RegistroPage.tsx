@@ -16,7 +16,9 @@ const RegistroPage = () => {
     telefono: '',
     correo: '',
     slug: '',
-    mensaje_opcional: ''
+    mensaje_opcional: '',
+    usuario: '',
+    contrasena: ''
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -50,6 +52,31 @@ const RegistroPage = () => {
     setIsLoading(true);
     
     try {
+      console.log("Verificando si el usuario ya existe:", formData.usuario);
+      
+      // Verificar si el usuario ya existe
+      const { data: usuarioExistente, error: errorUsuario } = await supabase
+        .from('usuarios')
+        .select('id')
+        .eq('usuario', formData.usuario)
+        .maybeSingle();
+      
+      if (errorUsuario) {
+        console.error("Error al verificar usuario:", errorUsuario);
+        throw errorUsuario;
+      }
+      
+      // Si el usuario ya existe, mostrar error
+      if (usuarioExistente) {
+        toast({
+          title: "Error",
+          description: "El nombre de usuario ya está en uso. Por favor, elige otro.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       console.log("Enviando datos a Supabase:", formData);
       
       // Enviar datos a Supabase (ahora sin RLS)
@@ -63,7 +90,9 @@ const RegistroPage = () => {
             correo: formData.correo,
             slug: formData.slug,
             mensaje_opcional: formData.mensaje_opcional,
-            estado: 'pendiente'
+            estado: 'pendiente',
+            usuario: formData.usuario,
+            contrasena: formData.contrasena
           }
         ])
         .select();
@@ -200,6 +229,35 @@ const RegistroPage = () => {
                 <p className="text-xs text-gray-500">
                   Esta será la URL donde tus clientes podrán reservar citas (sólo letras, números y guiones)
                 </p>
+              </div>
+              
+              {/* Nuevos campos de usuario y contraseña */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="usuario">Nombre de Usuario *</Label>
+                  <Input
+                    id="usuario"
+                    name="usuario"
+                    value={formData.usuario}
+                    onChange={handleChange}
+                    placeholder="Ej: mi_negocio"
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="contrasena">Contraseña *</Label>
+                  <Input
+                    id="contrasena"
+                    name="contrasena"
+                    type="password"
+                    value={formData.contrasena}
+                    onChange={handleChange}
+                    placeholder="Tu contraseña"
+                    required
+                    minLength={6}
+                  />
+                </div>
               </div>
               
               <div className="space-y-2">
