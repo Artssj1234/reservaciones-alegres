@@ -39,10 +39,14 @@ function isBusinessResponse(obj: any): obj is BusinessResponse {
 
 // Custom login function that uses our database function
 export const customLogin = async (usuario: string, contrasena: string): Promise<LoginResponse> => {
+  console.log('Intentando login con:', usuario, 'y contraseña:', contrasena.replace(/./g, '*'));
+  
   const { data, error } = await supabase.rpc("custom_login", {
     p_username: usuario,
     p_password: contrasena
   });
+  
+  console.log('Respuesta de login:', { data, error });
   
   if (error) {
     console.error('Error en custom login:', error);
@@ -51,18 +55,23 @@ export const customLogin = async (usuario: string, contrasena: string): Promise<
   
   // Properly handle the JSON response with type checking
   if (isLoginResponse(data)) {
+    console.log('Login exitoso para:', usuario, 'con rol:', data.role);
     return data;
   }
   
-  console.error('Unexpected response format:', data);
+  console.error('Formato de respuesta inesperado:', data);
   return { success: false, message: 'Error desconocido: formato de respuesta inválido' };
 };
 
 // Get business data for a user
 export const getBusinessByUserId = async (userId: string): Promise<BusinessResponse> => {
+  console.log('Obteniendo datos de negocio para usuario ID:', userId);
+  
   const { data, error } = await supabase.rpc("get_business_by_user_id", {
     p_user_id: userId
   });
+  
+  console.log('Respuesta de negocio:', { data, error });
   
   if (error) {
     console.error('Error al obtener datos del negocio:', error);
@@ -74,6 +83,6 @@ export const getBusinessByUserId = async (userId: string): Promise<BusinessRespo
     return data;
   }
   
-  console.error('Unexpected response format:', data);
+  console.error('Formato de respuesta inesperado:', data);
   return { success: false, message: 'Error desconocido: formato de respuesta inválido' };
 };

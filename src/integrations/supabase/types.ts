@@ -239,6 +239,7 @@ export type Database = {
           slug: string
           telefono: string
           usuario: string | null
+          usuario_id: string | null
         }
         Insert: {
           contrasena?: string | null
@@ -252,6 +253,7 @@ export type Database = {
           slug: string
           telefono: string
           usuario?: string | null
+          usuario_id?: string | null
         }
         Update: {
           contrasena?: string | null
@@ -265,6 +267,7 @@ export type Database = {
           slug?: string
           telefono?: string
           usuario?: string | null
+          usuario_id?: string | null
         }
         Relationships: []
       }

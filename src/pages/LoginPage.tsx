@@ -7,11 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import { AlertCircle } from 'lucide-react';
 
 const LoginPage = () => {
   const [usuario, setUsuario] = useState('');
   const [contrasena, setContrasena] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -19,11 +21,14 @@ const LoginPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setLoginError(null);
     
     try {
+      console.log("Iniciando proceso de login para:", usuario);
       const success = await login(usuario, contrasena);
       
       if (success) {
+        console.log("Login exitoso para:", usuario);
         toast({
           title: "¡Bienvenido!",
           description: "Has iniciado sesión correctamente.",
@@ -36,6 +41,8 @@ const LoginPage = () => {
           navigate('/negocio');
         }
       } else {
+        console.error("Login fallido para:", usuario);
+        setLoginError("Usuario o contraseña incorrectos. Por favor, verifica tus credenciales.");
         toast({
           title: "Error al iniciar sesión",
           description: "Usuario o contraseña incorrectos.",
@@ -43,12 +50,13 @@ const LoginPage = () => {
         });
       }
     } catch (error) {
+      console.error("Error en proceso de login:", error);
+      setLoginError("Ha ocurrido un error al procesar tu solicitud. Inténtalo de nuevo.");
       toast({
         title: "Error al iniciar sesión",
         description: "Ha ocurrido un error. Inténtalo de nuevo.",
         variant: "destructive",
       });
-      console.error("Error de login:", error);
     } finally {
       setIsLoading(false);
     }
@@ -65,6 +73,13 @@ const LoginPage = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {loginError && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-600 flex items-start">
+                <AlertCircle className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+                <span>{loginError}</span>
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="usuario">Usuario</Label>
               <Input

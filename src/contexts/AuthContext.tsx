@@ -32,7 +32,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const storedAuth = localStorage.getItem('auth');
     if (storedAuth) {
       try {
-        setAuth(JSON.parse(storedAuth));
+        const parsedAuth = JSON.parse(storedAuth);
+        console.log('Auth cargada desde localStorage:', parsedAuth);
+        setAuth(parsedAuth);
       } catch (error) {
         console.error('Error al parsear datos de autenticación:', error);
         localStorage.removeItem('auth');
@@ -43,9 +45,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Login usando nuestra función personalizada
   const login = async (usuario: string, contrasena: string): Promise<boolean> => {
     try {
-      console.log("Intentando login con:", usuario);
+      console.log("Iniciando proceso de login para:", usuario);
       
       const result = await customLogin(usuario, contrasena);
+      console.log("Resultado de customLogin:", result);
       
       if (!result.success) {
         console.error('Error de autenticación:', result.message);
@@ -54,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Ensure these properties exist in the result
       if (!result.user_id || !result.role) {
-        console.error('Error: Respuesta de login incompleta');
+        console.error('Error: Respuesta de login incompleta', result);
         return false;
       }
 
@@ -66,14 +69,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         creado_en: new Date().toISOString()
       };
 
+      console.log('Usuario autenticado:', usuarioAutenticado);
+
       let negocioData: Negocio | null = null;
 
       // Si es un usuario de tipo negocio, obtenemos los datos del negocio
       if (usuarioAutenticado.rol === 'negocio') {
+        console.log('Obteniendo datos de negocio para usuario:', result.user_id);
         const businessResult = await getBusinessByUserId(usuarioAutenticado.id);
+        console.log('Resultado de getBusinessByUserId:', businessResult);
         
         if (businessResult.success && businessResult.business) {
           negocioData = businessResult.business as Negocio;
+          console.log('Datos de negocio obtenidos:', negocioData);
         } else {
           console.error('Error al obtener datos del negocio:', businessResult.message);
         }
@@ -85,6 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         negocio: negocioData,
       };
 
+      console.log('Guardando nueva sesión auth:', newAuth);
       setAuth(newAuth);
       localStorage.setItem('auth', JSON.stringify(newAuth));
       return true;
@@ -95,6 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    console.log('Cerrando sesión');
     setAuth({
       isAuthenticated: false,
       usuario: null,
@@ -104,6 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateNegocio = (negocio: Negocio) => {
+    console.log('Actualizando datos de negocio:', negocio);
     const newAuth = {
       ...auth,
       negocio
