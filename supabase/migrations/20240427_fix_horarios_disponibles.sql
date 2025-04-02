@@ -120,3 +120,4 @@ BEGIN
     s.hora_inicio;
 END;
 $$;
+

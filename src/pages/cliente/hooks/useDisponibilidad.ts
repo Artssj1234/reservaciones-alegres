@@ -24,7 +24,13 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
       console.log(`Obteniendo días disponibles para negocio ID: ${negocioId} en año: ${anio}, mes: ${mes}, servicio: ${servicioId}`);
       setIsLoading(true);
       
-      const diasDispResult = await getDiasDisponibles(negocioId, anio, mes, servicioId);
+      // Podemos pasar servicioId como null si está vacío
+      const diasDispResult = await getDiasDisponibles(
+        negocioId, 
+        anio, 
+        mes, 
+        servicioId || undefined // Usar undefined si está vacío para que el API lo maneje como parámetro opcional
+      );
       
       if (diasDispResult.success && diasDispResult.data) {
         const dias = diasDispResult.data;
