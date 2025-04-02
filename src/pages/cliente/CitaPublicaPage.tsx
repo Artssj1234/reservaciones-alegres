@@ -53,6 +53,53 @@ const CitaPublicaPage = () => {
   });
   const { toast } = useToast();
   
+  const cargarDiasDisponibles = useCallback(async (anio: number, mes: number) => {
+    if (!negocio?.id) return;
+    
+    try {
+      console.log(`Obteniendo días disponibles para negocio ID: ${negocio.id} en año: ${anio}, mes: ${mes}`);
+      setIsLoading(true);
+      
+      const diasDispResult = await getDiasDisponibles(negocio.id, anio, mes);
+      
+      if (diasDispResult.success && diasDispResult.data) {
+        const dias = diasDispResult.data;
+        setDiasDisponibles(dias);
+        
+        // Crear un Set con las fechas que tienen disponibilidad para facilitar la búsqueda
+        const fechasDisponibles = new Set<string>();
+        dias.forEach(dia => {
+          if (dia.tiene_disponibilidad) {
+            fechasDisponibles.add(format(new Date(dia.fecha), 'yyyy-MM-dd'));
+          }
+        });
+        
+        console.log(`Fechas disponibles encontradas: ${fechasDisponibles.size}`, 
+          Array.from(fechasDisponibles).join(', '));
+          
+        setDiasSeleccionablesMes(fechasDisponibles);
+        
+        // Si no hay días disponibles, mostrar mensaje
+        if (fechasDisponibles.size === 0) {
+          toast({
+            title: "Información",
+            description: "No hay horarios disponibles para este mes.",
+          });
+        }
+      } else {
+        console.error('Error al cargar días disponibles:', diasDispResult.message);
+        setDiasDisponibles([]);
+        setDiasSeleccionablesMes(new Set());
+      }
+    } catch (error) {
+      console.error('Error en cargarDiasDisponibles:', error);
+      setDiasDisponibles([]);
+      setDiasSeleccionablesMes(new Set());
+    } finally {
+      setIsLoading(false);
+    }
+  }, [negocio?.id, toast]);
+  
   useEffect(() => {
     const cargarDatosIniciales = async () => {
       try {
@@ -125,53 +172,6 @@ const CitaPublicaPage = () => {
       cargarDiasDisponibles(mesActual.anio, mesActual.mes);
     }
   }, [negocio?.id, mesActual, cargarDiasDisponibles]);
-  
-  const cargarDiasDisponibles = useCallback(async (anio: number, mes: number) => {
-    if (!negocio?.id) return;
-    
-    try {
-      console.log(`Obteniendo días disponibles para negocio ID: ${negocio.id} en año: ${anio}, mes: ${mes}`);
-      setIsLoading(true);
-      
-      const diasDispResult = await getDiasDisponibles(negocio.id, anio, mes);
-      
-      if (diasDispResult.success && diasDispResult.data) {
-        const dias = diasDispResult.data;
-        setDiasDisponibles(dias);
-        
-        // Crear un Set con las fechas que tienen disponibilidad para facilitar la búsqueda
-        const fechasDisponibles = new Set<string>();
-        dias.forEach(dia => {
-          if (dia.tiene_disponibilidad) {
-            fechasDisponibles.add(format(new Date(dia.fecha), 'yyyy-MM-dd'));
-          }
-        });
-        
-        console.log(`Fechas disponibles encontradas: ${fechasDisponibles.size}`, 
-          Array.from(fechasDisponibles).join(', '));
-          
-        setDiasSeleccionablesMes(fechasDisponibles);
-        
-        // Si no hay días disponibles, mostrar mensaje
-        if (fechasDisponibles.size === 0) {
-          toast({
-            title: "Información",
-            description: "No hay horarios disponibles para este mes.",
-          });
-        }
-      } else {
-        console.error('Error al cargar días disponibles:', diasDispResult.message);
-        setDiasDisponibles([]);
-        setDiasSeleccionablesMes(new Set());
-      }
-    } catch (error) {
-      console.error('Error en cargarDiasDisponibles:', error);
-      setDiasDisponibles([]);
-      setDiasSeleccionablesMes(new Set());
-    } finally {
-      setIsLoading(false);
-    }
-  }, [negocio?.id, toast]);
   
   useEffect(() => {
     const cargarHorasDisponibles = async () => {
