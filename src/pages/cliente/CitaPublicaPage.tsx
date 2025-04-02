@@ -104,10 +104,11 @@ const CitaPublicaPage = () => {
         
         const diasDispResult = await getDiasDisponibles(negocioResult.data.id, anioActual, mesActual);
         
-        if (diasDispResult.success) {
+        if (diasDispResult.success && diasDispResult.data) {
           setDiasDisponibles(diasDispResult.data);
         } else {
           console.error('Error al cargar días disponibles:', diasDispResult.message);
+          setDiasDisponibles([]);
         }
         
       } catch (error) {
@@ -123,7 +124,7 @@ const CitaPublicaPage = () => {
     };
     
     cargarDatos();
-  }, [slug, toast]);
+  }, [slug, toast, hoy]);
   
   useEffect(() => {
     const cargarHorasDisponibles = async () => {
@@ -142,8 +143,8 @@ const CitaPublicaPage = () => {
           servicio.duracion_minutos
         );
         
-        if (result.success) {
-          setHorasDisponibles(result.data.filter((h: HorarioDisponible) => h.disponible));
+        if (result.success && result.data) {
+          setHorasDisponibles(result.data.filter(h => h.disponible));
         } else {
           console.error('Error al cargar horas disponibles:', result.message);
           setHorasDisponibles([]);

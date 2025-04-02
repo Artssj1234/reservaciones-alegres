@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -35,7 +34,7 @@ const VerificarCitaPage = () => {
     try {
       const result = await getCitaByTelefono(telefono.trim());
       
-      if (result.success && result.data.length > 0) {
+      if (result.success && result.data && result.data.length > 0) {
         setCitasEncontradas(result.data);
       } else {
         setCitasEncontradas([]);
