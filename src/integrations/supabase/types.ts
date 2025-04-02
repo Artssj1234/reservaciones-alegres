@@ -240,18 +240,21 @@ export type Database = {
       }
       servicios: {
         Row: {
+          activo: boolean | null
           duracion_minutos: number
           id: string
           negocio_id: string | null
           nombre: string
         }
         Insert: {
+          activo?: boolean | null
           duracion_minutos: number
           id?: string
           negocio_id?: string | null
           nombre: string
         }
         Update: {
+          activo?: boolean | null
           duracion_minutos?: number
           id?: string
           negocio_id?: string | null

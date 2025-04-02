@@ -36,6 +36,7 @@ export interface Servicio {
   negocio_id: string;
   nombre: string;
   duracion_minutos: number;
+  activo: boolean;
 }
 
 export interface HorarioRecurrente {

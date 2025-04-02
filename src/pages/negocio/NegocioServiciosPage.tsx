@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Loader2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,13 +27,15 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
 import { getServiciosByNegocioId, createServicio, updateServicio, deleteServicio } from '@/integrations/supabase/client';
+import { Servicio } from '@/types';
 
 const NegocioServiciosPage = () => {
   const { auth } = useAuth();
-  const [servicios, setServicios] = useState<any[]>([]);
+  const [servicios, setServicios] = useState<Servicio[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingServicio, setEditingServicio] = useState<any>(null);
+  const [editingServicio, setEditingServicio] = useState<Servicio | null>(null);
   const [deleteServicioId, setDeleteServicioId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     id: '',
@@ -90,7 +92,7 @@ const NegocioServiciosPage = () => {
     loadServicios();
   }, [negocioId, toast]);
 
-  const handleOpenDialog = (servicio: any = null) => {
+  const handleOpenDialog = (servicio: Servicio | null = null) => {
     if (servicio) {
       setEditingServicio(servicio);
       setFormData({
@@ -131,6 +133,7 @@ const NegocioServiciosPage = () => {
     e.preventDefault();
     
     try {
+      setIsSaving(true);
       if (!negocioId) {
         toast({
           title: "Error",
@@ -193,9 +196,10 @@ const NegocioServiciosPage = () => {
         description: "Ocurrió un error al guardar el servicio. Intenta de nuevo más tarde.",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
+      setIsDialogOpen(false);
     }
-    
-    setIsDialogOpen(false);
   };
 
   const handleDeleteServicio = (id: string) => {
@@ -281,7 +285,10 @@ const NegocioServiciosPage = () => {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="py-8 text-center text-gray-500">Cargando servicios...</div>
+            <div className="flex items-center justify-center py-8 text-gray-500">
+              <Loader2 className="animate-spin mr-2" />
+              <span>Cargando servicios...</span>
+            </div>
           ) : (
             <div className="rounded-md border">
               <table className="w-full text-sm">
@@ -400,8 +407,15 @@ const NegocioServiciosPage = () => {
               <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit">
-                {editingServicio ? 'Guardar Cambios' : 'Crear Servicio'}
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {editingServicio ? 'Guardando...' : 'Creando...'}
+                  </>
+                ) : (
+                  editingServicio ? 'Guardar Cambios' : 'Crear Servicio'
+                )}
               </Button>
             </DialogFooter>
           </form>
