@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthState, Usuario, Negocio } from '@/types';
-import { supabase, customLogin, getBusinessByUserId } from '@/integrations/supabase/client';
+import { supabase, customLogin, getBusinessByUserId, LoginResponse, BusinessResponse } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   auth: AuthState;
