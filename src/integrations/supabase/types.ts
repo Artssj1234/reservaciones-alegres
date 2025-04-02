@@ -347,7 +347,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vista_horarios_disponibles: {
+        Row: {
+          dia_semana: string | null
+          hora_fin: string | null
+          hora_inicio: string | null
+          negocio_id: string | null
+          nota: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "horarios_recurrentes_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       custom_login: {
@@ -413,6 +430,7 @@ export type Database = {
         Returns: {
           fecha: string
           tiene_disponibilidad: boolean
+          estado: string
         }[]
       }
       obtener_horarios_disponibles: {
@@ -425,6 +443,7 @@ export type Database = {
           hora_inicio: string
           hora_fin: string
           disponible: boolean
+          estado: string
         }[]
       }
       update_negocio_profile: {

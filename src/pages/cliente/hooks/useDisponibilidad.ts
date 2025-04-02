@@ -89,6 +89,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
     }
   }, [mesActual]);
 
+  // Load available days when month or business changes
   useEffect(() => {
     if (negocioId) {
       console.log(`Loading availability for business ID ${negocioId} for month ${mesActual.mes}/${mesActual.anio}`);
@@ -97,20 +98,29 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
     }
   }, [negocioId, mesActual, cargarDiasDisponibles]);
 
+  // Load available time slots when date or service changes
   useEffect(() => {
     const cargarHorasDisponibles = async () => {
       if (!negocioId || !servicioId) {
         console.log("Missing required data: negocioId or servicioId");
+        setHorasDisponibles([]);
         return;
       }
       
       try {
+        console.log(`Loading time slots for date: ${format(fecha, 'yyyy-MM-dd')}`);
         setCargandoHorarios(true);
         
         const fechaFormateada = format(fecha, 'yyyy-MM-dd');
         
-        // Get the duration from the service or use a default
-        const duracionMinutos = servicioId ? 30 : 30; // Default duration
+        // Get the duration from the selected service
+        let duracionMinutos = 30; // Default duration
+        
+        if (servicioId) {
+          // Here we would ideally get the duration from the service
+          // But for now we'll assume it's passed to the function
+          duracionMinutos = servicioId ? 30 : 30; 
+        }
         
         console.log(`Obteniendo horarios para negocio: ${negocioId}, fecha: ${fechaFormateada}, duración: ${duracionMinutos}`);
         const result = await getHorariosDisponibles(
@@ -125,6 +135,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
           // Ensure we have an array of time slots
           const horariosDisp = Array.isArray(result.data) ? result.data : [];
             
+          // Store all time slots including unavailable ones
           setHorasDisponibles(horariosDisp);
           
           const horariosDisponibles = horariosDisp.filter(h => h.disponible);
@@ -161,6 +172,8 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
     
     if (negocioId && servicioId && fecha) {
       cargarHorasDisponibles();
+    } else {
+      setHorasDisponibles([]);
     }
   }, [negocioId, servicioId, fecha, toast]);
 

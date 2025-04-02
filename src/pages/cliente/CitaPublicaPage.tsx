@@ -58,7 +58,9 @@ const CitaPublicaPage = () => {
         servicio_id: formData.servicio_id,
         fecha: formData.fecha,
         horasDisponiblesCount: horasDisponibles.length,
-        diasSeleccionablesCount: diasSeleccionablesMes.size
+        horasDisponibles: horasDisponibles,
+        diasSeleccionablesCount: diasSeleccionablesMes.size,
+        diasSeleccionables: Array.from(diasSeleccionablesMes)
       });
     }
   }, [negocio, servicios, step, formData, horasDisponibles, diasSeleccionablesMes]);
@@ -83,6 +85,9 @@ const CitaPublicaPage = () => {
     );
   }
 
+  // Get the selected service for displaying service duration
+  const selectedService = servicios.find(s => s.id === formData.servicio_id);
+
   return (
     <>
       <StepsContainer 
@@ -106,6 +111,7 @@ const CitaPublicaPage = () => {
             diasSeleccionablesMes={diasSeleccionablesMes}
             horasDisponibles={horasDisponibles}
             cargandoHorarios={cargandoHorarios}
+            duracionServicio={selectedService?.duracion_minutos || 30}
             onDateChange={handleFechaChange}
             onTimeChange={handleHoraChange}
             onMonthChange={handleMonthChange}

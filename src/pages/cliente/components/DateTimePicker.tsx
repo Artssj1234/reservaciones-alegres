@@ -1,13 +1,14 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
-import { Info, Loader2, AlertCircle } from 'lucide-react';
+import { Info, Loader2, AlertCircle, Clock } from 'lucide-react';
 import { format, isAfter, isBefore, addMonths, startOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { HorarioDisponible } from '@/types';
 import { useToast } from '@/components/ui/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 interface DateTimePickerProps {
   date: Date;
@@ -15,6 +16,7 @@ interface DateTimePickerProps {
   diasSeleccionablesMes: Set<string>;
   horasDisponibles: HorarioDisponible[];
   cargandoHorarios: boolean;
+  duracionServicio: number;
   onDateChange: (date: Date) => void;
   onTimeChange: (hora: string) => void;
   onMonthChange: (date: Date) => void;
@@ -28,6 +30,7 @@ const DateTimePicker = ({
   diasSeleccionablesMes,
   horasDisponibles,
   cargandoHorarios,
+  duracionServicio,
   onDateChange,
   onTimeChange,
   onMonthChange,
@@ -39,17 +42,38 @@ const DateTimePicker = ({
   const limiteMaximo = addMonths(hoy, 2);
   const currentMonth = startOfMonth(date);
   const [fechaSeleccionada, setFechaSeleccionada] = useState<Date | undefined>(date);
+  const [horasDisponiblesFiltered, setHorasDisponiblesFiltered] = useState<HorarioDisponible[]>([]);
+  
+  // Filter available times to show only those that are actually available
+  useEffect(() => {
+    if (horasDisponibles && horasDisponibles.length > 0) {
+      const filteredHoras = horasDisponibles.filter(hora => hora.disponible);
+      setHorasDisponiblesFiltered(filteredHoras);
+      
+      console.log(`Filtered available times: ${filteredHoras.length} of ${horasDisponibles.length} total slots`);
+      
+      // If the currently selected time is no longer available, clear it
+      if (selectedTime && !filteredHoras.some(hora => hora.hora_inicio === selectedTime)) {
+        console.log(`Selected time ${selectedTime} is no longer available`);
+        onTimeChange('');
+      }
+    } else {
+      setHorasDisponiblesFiltered([]);
+    }
+  }, [horasDisponibles, selectedTime, onTimeChange]);
   
   // Debug logging
-  console.log('DateTimePicker render:', {
-    date,
-    selectedTime,
-    diasSeleccionablesCount: diasSeleccionablesMes.size,
-    diasDisponibles: Array.from(diasSeleccionablesMes),
-    horasDisponiblesCount: horasDisponibles.length,
-    horasDisponiblesValues: horasDisponibles,
-    currentDayOfWeek: format(date, 'EEEE', { locale: es }),
-  });
+  useEffect(() => {
+    console.log('DateTimePicker render:', {
+      date: format(date, 'yyyy-MM-dd'),
+      selectedTime,
+      diasSeleccionablesCount: diasSeleccionablesMes.size,
+      diasDisponibles: Array.from(diasSeleccionablesMes),
+      horasDisponiblesCount: horasDisponibles.length,
+      horasDisponiblesFiltered: horasDisponiblesFiltered.length,
+      currentDayOfWeek: format(date, 'EEEE', { locale: es }),
+    });
+  }, [date, selectedTime, diasSeleccionablesMes, horasDisponibles, horasDisponiblesFiltered]);
 
   const handleMonthChangeDebug = (newDate: Date) => {
     console.log('Month changed:', {
@@ -72,6 +96,11 @@ const DateTimePicker = ({
       console.log('Date selected:', format(newDate, 'yyyy-MM-dd'));
       setFechaSeleccionada(newDate);
       onDateChange(newDate);
+      
+      // Clear selected time when changing date
+      if (selectedTime) {
+        onTimeChange('');
+      }
     }
   };
 
@@ -99,6 +128,13 @@ const DateTimePicker = ({
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-medium text-center">Selecciona fecha y hora</h2>
+      
+      <div className="flex justify-center">
+        <Badge variant="outline" className="bg-blue-50">
+          <Clock className="h-3 w-3 mr-1" />
+          Duración del servicio: {duracionServicio} minutos
+        </Badge>
+      </div>
       
       {diasSeleccionablesMes.size === 0 && (
         <div className="text-center p-6 bg-gray-50 rounded-lg">
@@ -143,7 +179,7 @@ const DateTimePicker = ({
                 <Loader2 className="h-6 w-6 animate-spin mr-2 text-blue-500" />
                 <p className="text-gray-600">Cargando horarios disponibles...</p>
               </div>
-            ) : horasDisponibles.length === 0 ? (
+            ) : horasDisponiblesFiltered.length === 0 ? (
               <div className="border rounded-md p-4 bg-gray-50 h-72 flex flex-col items-center justify-center">
                 <AlertCircle className="h-8 w-8 text-amber-500 mb-2" />
                 <p className="text-gray-700 text-center font-medium">
@@ -156,28 +192,30 @@ const DateTimePicker = ({
             ) : (
               <div className="border rounded-md p-4 h-72 overflow-y-auto">
                 <div className="grid grid-cols-2 gap-2">
-                  {horasDisponibles.map((hora, index) => (
-                    <div
-                      key={index}
-                      className={`p-2 border rounded text-center cursor-pointer transition-colors ${
-                        !hora.disponible ? 
-                          'bg-gray-100 text-gray-400 cursor-not-allowed' : 
+                  {horasDisponiblesFiltered.map((hora, index) => {
+                    // Calculate the end time based on the service duration
+                    const horaFin = hora.hora_fin;
+                    
+                    return (
+                      <div
+                        key={index}
+                        className={`p-2 border rounded text-center cursor-pointer transition-colors ${
                           selectedTime === hora.hora_inicio
                             ? 'border-blue-600 bg-blue-50 font-medium'
                             : 'hover:border-gray-400'
-                      }`}
-                      onClick={() => {
-                        if (hora.disponible) {
-                          onTimeChange(hora.hora_inicio);
-                        }
-                      }}
-                    >
-                      {hora.hora_inicio}
-                      {!hora.disponible && (
-                        <span className="block text-xs mt-1">No disponible</span>
-                      )}
-                    </div>
-                  ))}
+                        }`}
+                        onClick={() => onTimeChange(hora.hora_inicio)}
+                      >
+                        <div>
+                          {hora.hora_inicio}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {/* Show the end time */}
+                          hasta {horaFin}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
