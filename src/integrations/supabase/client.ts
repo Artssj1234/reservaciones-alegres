@@ -492,6 +492,11 @@ export const getHorariosDisponibles = async (negocioId: string, fecha: string, d
     // Asegurarnos de que los datos sean del tipo correcto
     const horarios: HorarioDisponible[] = Array.isArray(data) ? data : [];
     
+    // Agregar logs detallados
+    console.log(`Horarios disponibles recibidos: ${horarios.length} slots`);
+    console.log('Disponibles:', horarios.filter(h => h.disponible).length);
+    console.log('No disponibles:', horarios.filter(h => !h.disponible).length);
+    
     return { success: true, data: horarios };
   } catch (err) {
     console.error('Error en getHorariosDisponibles:', err);
@@ -519,6 +524,13 @@ export const getDiasDisponibles = async (negocioId: string, anio: number, mes: n
     
     // Asegurarnos de que los datos sean del tipo correcto
     const dias: DiaDisponible[] = Array.isArray(data) ? data : [];
+    
+    // Agregar logs detallados
+    console.log(`Días recibidos: ${dias.length}`);
+    console.log('Con disponibilidad:', dias.filter(d => d.tiene_disponibilidad).length);
+    console.log('Estado sin_horario:', dias.filter(d => d.estado === 'sin_horario').length);
+    console.log('Estado disponible:', dias.filter(d => d.estado === 'disponible').length);
+    console.log('Estado completamente_bloqueado:', dias.filter(d => d.estado === 'completamente_bloqueado').length);
     
     return { success: true, data: dias };
   } catch (err) {

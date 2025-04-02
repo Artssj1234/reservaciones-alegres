@@ -31,13 +31,11 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         const dias = diasDispResult.data;
         setDiasDisponibles(dias);
         
-        // Modificación importante: Considerar cualquier día que tenga horario configurado como seleccionable,
-        // independientemente de si está completamente bloqueado o no
+        // La clave es marcar como seleccionable cualquier día que tenga horario configurado
+        // aunque esté parcialmente bloqueado
         const fechasDisponibles = new Set<string>();
         dias.forEach(dia => {
-          // Si el día tiene un horario configurado, lo marcamos como disponible
-          // Solo los días sin horario ('sin_horario') no son seleccionables
-          if (dia.estado !== 'sin_horario') {
+          if (dia.tiene_disponibilidad || dia.estado === 'disponible' || dia.estado === 'parcialmente_bloqueado') {
             fechasDisponibles.add(format(new Date(dia.fecha), 'yyyy-MM-dd'));
           }
         });
