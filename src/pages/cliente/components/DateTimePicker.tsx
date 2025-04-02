@@ -105,7 +105,7 @@ const DateTimePicker = ({
   };
 
   // Mostrar el indicador de carga mientras se está cargando el mes
-  if (cargandoHorarios && diasSeleccionablesMes.size === 0) {
+  if (cargandoHorarios && horasDisponibles.length === 0) {
     return (
       <div className="space-y-6">
         <h2 className="text-xl font-medium text-center">Selecciona fecha y hora</h2>
@@ -136,19 +136,19 @@ const DateTimePicker = ({
         </Badge>
       </div>
       
-      {diasSeleccionablesMes.size === 0 && (
-        <div className="text-center p-6 bg-gray-50 rounded-lg">
-          <Info className="mx-auto h-10 w-10 text-blue-500 mb-3" />
-          <p className="text-gray-700">Este negocio no tiene horarios disponibles configurados para este mes.</p>
-          <p className="text-sm text-gray-500 mt-1">Prueba con otro mes o contacta directamente con el negocio.</p>
-        </div>
-      )}
-      
-      {diasSeleccionablesMes.size > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label className="mb-2 block">Fecha</Label>
-            <div className="border rounded-md p-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label className="mb-2 block">Fecha</Label>
+          <div className="border rounded-md p-3">
+            {diasSeleccionablesMes.size === 0 ? (
+              <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <Info className="mx-auto h-6 w-6 text-blue-500 mb-3" />
+                <p className="text-gray-700">No hay horarios configurados para este mes.</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  El negocio debe configurar los horarios regulares en la sección de administración.
+                </p>
+              </div>
+            ) : (
               <Calendar
                 mode="single"
                 selected={fechaSeleccionada}
@@ -169,59 +169,59 @@ const DateTimePicker = ({
                 locale={es}
                 initialFocus
               />
-            </div>
-          </div>
-          
-          <div>
-            <Label className="mb-2 block">Hora Disponible</Label>
-            {cargandoHorarios ? (
-              <div className="border rounded-md p-4 flex items-center justify-center h-72">
-                <Loader2 className="h-6 w-6 animate-spin mr-2 text-blue-500" />
-                <p className="text-gray-600">Cargando horarios disponibles...</p>
-              </div>
-            ) : horasDisponiblesFiltered.length === 0 ? (
-              <div className="border rounded-md p-4 bg-gray-50 h-72 flex flex-col items-center justify-center">
-                <AlertCircle className="h-8 w-8 text-amber-500 mb-2" />
-                <p className="text-gray-700 text-center font-medium">
-                  No hay horas disponibles
-                </p>
-                <p className="text-sm text-gray-500 text-center mt-1">
-                  Por favor selecciona otra fecha o contacta directamente con el negocio
-                </p>
-              </div>
-            ) : (
-              <div className="border rounded-md p-4 h-72 overflow-y-auto">
-                <div className="grid grid-cols-2 gap-2">
-                  {horasDisponiblesFiltered.map((hora, index) => {
-                    // Calculate the end time based on the service duration
-                    const horaFin = hora.hora_fin;
-                    
-                    return (
-                      <div
-                        key={index}
-                        className={`p-2 border rounded text-center cursor-pointer transition-colors ${
-                          selectedTime === hora.hora_inicio
-                            ? 'border-blue-600 bg-blue-50 font-medium'
-                            : 'hover:border-gray-400'
-                        }`}
-                        onClick={() => onTimeChange(hora.hora_inicio)}
-                      >
-                        <div>
-                          {hora.hora_inicio}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {/* Show the end time */}
-                          hasta {horaFin}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
             )}
           </div>
         </div>
-      )}
+        
+        <div>
+          <Label className="mb-2 block">Hora Disponible</Label>
+          {cargandoHorarios ? (
+            <div className="border rounded-md p-4 flex items-center justify-center h-72">
+              <Loader2 className="h-6 w-6 animate-spin mr-2 text-blue-500" />
+              <p className="text-gray-600">Cargando horarios disponibles...</p>
+            </div>
+          ) : horasDisponiblesFiltered.length === 0 ? (
+            <div className="border rounded-md p-4 bg-gray-50 h-72 flex flex-col items-center justify-center">
+              <AlertCircle className="h-8 w-8 text-amber-500 mb-2" />
+              <p className="text-gray-700 text-center font-medium">
+                No hay horas disponibles
+              </p>
+              <p className="text-sm text-gray-500 text-center mt-1">
+                Por favor selecciona otra fecha o contacta directamente con el negocio
+              </p>
+            </div>
+          ) : (
+            <div className="border rounded-md p-4 h-72 overflow-y-auto">
+              <div className="grid grid-cols-2 gap-2">
+                {horasDisponiblesFiltered.map((hora, index) => {
+                  // Calculate the end time based on the service duration
+                  const horaFin = hora.hora_fin;
+                  
+                  return (
+                    <div
+                      key={index}
+                      className={`p-2 border rounded text-center cursor-pointer transition-colors ${
+                        selectedTime === hora.hora_inicio
+                          ? 'border-blue-600 bg-blue-50 font-medium'
+                          : 'hover:border-gray-400'
+                      }`}
+                      onClick={() => onTimeChange(hora.hora_inicio)}
+                    >
+                      <div>
+                        {hora.hora_inicio}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {/* Show the end time */}
+                        hasta {horaFin}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
       
       <div className="flex justify-between">
         <Button variant="outline" onClick={onBack}>

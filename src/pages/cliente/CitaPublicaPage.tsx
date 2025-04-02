@@ -58,7 +58,6 @@ const CitaPublicaPage = () => {
         servicio_id: formData.servicio_id,
         fecha: formData.fecha,
         horasDisponiblesCount: horasDisponibles.length,
-        horasDisponibles: horasDisponibles,
         diasSeleccionablesCount: diasSeleccionablesMes.size,
         diasSeleccionables: Array.from(diasSeleccionablesMes)
       });

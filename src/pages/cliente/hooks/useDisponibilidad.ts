@@ -3,7 +3,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { getDiasDisponibles, getHorariosDisponibles } from '@/integrations/supabase/client';
 import { HorarioDisponible, DiaDisponible } from '@/types';
-import { format } from 'date-fns';
+import { format, isAfter, isBefore } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 export const useDisponibilidad = (negocioId: string | undefined, servicioId: string, fecha: Date) => {
   const [horasDisponibles, setHorasDisponibles] = useState<HorarioDisponible[]>([]);
@@ -31,9 +32,13 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         setDiasDisponibles(dias);
         
         // Crear un Set con las fechas que tienen disponibilidad para facilitar la búsqueda
+        // Importante: Ahora consideramos TODOS los días que tienen horario configurado como disponibles
+        // incluso si no tienen el campo tiene_disponibilidad como true
         const fechasDisponibles = new Set<string>();
         dias.forEach(dia => {
-          if (dia.tiene_disponibilidad) {
+          // Si el día tiene un horario configurado (sin importar si está completamente ocupado)
+          // lo marcamos como disponible para permitir la selección
+          if (dia.estado !== 'sin_horario') {
             fechasDisponibles.add(format(new Date(dia.fecha), 'yyyy-MM-dd'));
           }
         });
@@ -47,7 +52,8 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         if (fechasDisponibles.size === 0) {
           toast({
             title: "Información",
-            description: "No hay horarios disponibles para este mes.",
+            description: "No hay horarios configurados para este mes. Por favor, configura tus horarios regulares.",
+            duration: 5000,
           });
         }
       } else {
