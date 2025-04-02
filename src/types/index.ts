@@ -1,4 +1,3 @@
-
 export type Role = 'admin' | 'negocio';
 
 export interface Usuario {
@@ -53,6 +52,7 @@ export interface HoraBloqueada {
   fecha: string;
   hora_inicio: string;
   hora_fin: string;
+  motivo?: string;
 }
 
 export interface Cita {

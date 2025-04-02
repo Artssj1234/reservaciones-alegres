@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Edit, Trash2, Calendar } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Calendar, Loader2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +42,7 @@ import {
   updateHoraBloqueada,
   deleteHoraBloqueada
 } from '@/integrations/supabase/client';
+import { HorarioRecurrente, HoraBloqueada } from '@/types';
 
 // Traducción de días de la semana
 const diasSemana = [
@@ -57,19 +58,21 @@ const diasSemana = [
 const NegocioHorariosPage = () => {
   const { auth } = useAuth();
   const [activeTab, setActiveTab] = useState<'horarios' | 'bloqueados'>('horarios');
-  const [horarios, setHorarios] = useState<any[]>([]);
-  const [horasBloqueadas, setHorasBloqueadas] = useState<any[]>([]);
+  const [horarios, setHorarios] = useState<HorarioRecurrente[]>([]);
+  const [horasBloqueadas, setHorasBloqueadas] = useState<HoraBloqueada[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSavingHorario, setIsSavingHorario] = useState(false);
+  const [isSavingBloqueado, setIsSavingBloqueado] = useState(false);
   const [isHorarioDialogOpen, setIsHorarioDialogOpen] = useState(false);
   const [isBloqueadoDialogOpen, setIsBloqueadoDialogOpen] = useState(false);
   const [deleteHorarioId, setDeleteHorarioId] = useState<string | null>(null);
   const [deleteBloqueadoId, setDeleteBloqueadoId] = useState<string | null>(null);
-  const [editingHorario, setEditingHorario] = useState<any>(null);
-  const [editingBloqueado, setEditingBloqueado] = useState<any>(null);
+  const [editingHorario, setEditingHorario] = useState<HorarioRecurrente | null>(null);
+  const [editingBloqueado, setEditingBloqueado] = useState<HoraBloqueada | null>(null);
   
   const [horarioForm, setHorarioForm] = useState({
     id: '',
-    dia_semana: 'lunes',
+    dia_semana: 'lunes' as HorarioRecurrente['dia_semana'],
     hora_inicio: '09:00',
     hora_fin: '18:00',
   });
@@ -142,7 +145,7 @@ const NegocioHorariosPage = () => {
   }, [negocioId, toast]);
 
   // Horarios recurrentes
-  const handleHorarioDialog = (horario: any = null) => {
+  const handleHorarioDialog = (horario: HorarioRecurrente | null = null) => {
     if (horario) {
       setEditingHorario(horario);
       setHorarioForm({
@@ -171,6 +174,8 @@ const NegocioHorariosPage = () => {
     e.preventDefault();
     
     try {
+      setIsSavingHorario(true);
+      
       if (!negocioId) {
         toast({
           title: "Error",
@@ -234,9 +239,10 @@ const NegocioHorariosPage = () => {
         description: "Ocurrió un error al guardar el horario. Intenta de nuevo más tarde.",
         variant: "destructive",
       });
+    } finally {
+      setIsSavingHorario(false);
+      setIsHorarioDialogOpen(false);
     }
-    
-    setIsHorarioDialogOpen(false);
   };
 
   const handleDeleteHorario = (id: string) => {
@@ -275,7 +281,7 @@ const NegocioHorariosPage = () => {
   };
 
   // Horas bloqueadas
-  const handleBloqueadoDialog = (bloqueado: any = null) => {
+  const handleBloqueadoDialog = (bloqueado: HoraBloqueada | null = null) => {
     if (bloqueado) {
       setEditingBloqueado(bloqueado);
       setBloqueadoForm({
@@ -307,6 +313,8 @@ const NegocioHorariosPage = () => {
     e.preventDefault();
     
     try {
+      setIsSavingBloqueado(true);
+      
       if (!negocioId) {
         toast({
           title: "Error",
@@ -372,9 +380,10 @@ const NegocioHorariosPage = () => {
         description: "Ocurrió un error al guardar el bloqueo horario. Intenta de nuevo más tarde.",
         variant: "destructive",
       });
+    } finally {
+      setIsSavingBloqueado(false);
+      setIsBloqueadoDialogOpen(false);
     }
-    
-    setIsBloqueadoDialogOpen(false);
   };
 
   const handleDeleteBloqueado = (id: string) => {
@@ -453,7 +462,10 @@ const NegocioHorariosPage = () => {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="py-8 text-center text-gray-500">Cargando horarios...</div>
+              <div className="flex items-center justify-center py-8 text-gray-500">
+                <Loader2 className="animate-spin mr-2" />
+                <span>Cargando horarios...</span>
+              </div>
             ) : (
               <div className="rounded-md border">
                 <table className="w-full text-sm">
@@ -522,7 +534,10 @@ const NegocioHorariosPage = () => {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="py-8 text-center text-gray-500">Cargando horas bloqueadas...</div>
+              <div className="flex items-center justify-center py-8 text-gray-500">
+                <Loader2 className="animate-spin mr-2" />
+                <span>Cargando horas bloqueadas...</span>
+              </div>
             ) : (
               <div className="rounded-md border">
                 <table className="w-full text-sm">
@@ -641,8 +656,15 @@ const NegocioHorariosPage = () => {
               <Button variant="outline" type="button" onClick={() => setIsHorarioDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit">
-                {editingHorario ? 'Guardar Cambios' : 'Añadir Horario'}
+              <Button type="submit" disabled={isSavingHorario}>
+                {isSavingHorario ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {editingHorario ? 'Guardando...' : 'Creando...'}
+                  </>
+                ) : (
+                  editingHorario ? 'Guardar Cambios' : 'Añadir Horario'
+                )}
               </Button>
             </DialogFooter>
           </form>
@@ -719,8 +741,15 @@ const NegocioHorariosPage = () => {
               <Button variant="outline" type="button" onClick={() => setIsBloqueadoDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit">
-                {editingBloqueado ? 'Guardar Cambios' : 'Bloquear Horas'}
+              <Button type="submit" disabled={isSavingBloqueado}>
+                {isSavingBloqueado ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {editingBloqueado ? 'Guardando...' : 'Bloqueando...'}
+                  </>
+                ) : (
+                  editingBloqueado ? 'Guardar Cambios' : 'Bloquear Horas'
+                )}
               </Button>
             </DialogFooter>
           </form>
