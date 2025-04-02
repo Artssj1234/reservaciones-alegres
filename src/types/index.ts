@@ -1,3 +1,4 @@
+
 export type Role = 'admin' | 'negocio';
 
 export interface Usuario {

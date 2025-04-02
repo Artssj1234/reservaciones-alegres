@@ -335,9 +335,8 @@ const NegocioHorariosPage = () => {
     setIsBloqueadoDialogOpen(true);
   };
 
-  const handleBloqueadoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setBloqueadoForm(prev => ({ ...prev, [name]: value }));
+  const handleBloqueadoChange = (field: string, value: string) => {
+    setBloqueadoForm(prev => ({ ...prev, [field]: value }));
   };
 
   const handleBloqueadoSubmit = async (e: React.FormEvent) => {
@@ -460,6 +459,15 @@ const NegocioHorariosPage = () => {
     }
   };
 
+  // Función para agrupar horarios por día de la semana
+  const horariosPorDia = diasSemana.map(dia => {
+    return {
+      dia: dia.valor,
+      texto: dia.texto,
+      franjas: horarios.filter(h => h.dia_semana === dia.valor)
+    };
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -488,7 +496,7 @@ const NegocioHorariosPage = () => {
             <CardTitle>Horarios Regulares</CardTitle>
             <Button onClick={() => handleHorarioDialog()}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Añadir Horario
+              Añadir Franja Horaria
             </Button>
           </CardHeader>
           <CardContent>
@@ -498,55 +506,55 @@ const NegocioHorariosPage = () => {
                 <span>Cargando horarios...</span>
               </div>
             ) : (
-              <div className="rounded-md border">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="py-3 px-4 text-left">Día</th>
-                      <th className="py-3 px-4 text-left">Hora Inicio</th>
-                      <th className="py-3 px-4 text-left">Hora Fin</th>
-                      <th className="py-3 px-4 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {horarios.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="py-6 text-center text-gray-500">
-                          No hay horarios configurados
-                        </td>
-                      </tr>
+              <div className="space-y-6">
+                {horariosPorDia.map(diaTrabajo => (
+                  <div key={diaTrabajo.dia} className="border rounded-md p-4">
+                    <h3 className="font-semibold text-lg mb-2">{diaTrabajo.texto}</h3>
+                    
+                    {diaTrabajo.franjas.length === 0 ? (
+                      <p className="text-gray-500 py-2">No hay horarios configurados</p>
                     ) : (
-                      horarios.map((horario) => (
-                        <tr key={horario.id} className="border-b">
-                          <td className="py-3 px-4">
-                            {diasSemana.find(d => d.valor === horario.dia_semana)?.texto || horario.dia_semana}
-                          </td>
-                          <td className="py-3 px-4">{horario.hora_inicio}</td>
-                          <td className="py-3 px-4">{horario.hora_fin}</td>
-                          <td className="py-3 px-4 text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={() => handleHorarioDialog(horario)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => handleDeleteHorario(horario.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                      <div className="rounded-md border">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b bg-muted/50">
+                              <th className="py-3 px-4 text-left">Hora Inicio</th>
+                              <th className="py-3 px-4 text-left">Hora Fin</th>
+                              <th className="py-3 px-4 text-right">Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {diaTrabajo.franjas.map((franja) => (
+                              <tr key={franja.id} className="border-b">
+                                <td className="py-3 px-4">{franja.hora_inicio}</td>
+                                <td className="py-3 px-4">{franja.hora_fin}</td>
+                                <td className="py-3 px-4 text-right">
+                                  <div className="flex justify-end gap-2">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon"
+                                      onClick={() => handleHorarioDialog(franja)}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon"
+                                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                      onClick={() => handleDeleteHorario(franja.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     )}
-                  </tbody>
-                </table>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
@@ -721,11 +729,10 @@ const NegocioHorariosPage = () => {
                 <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                 <Input
                   id="fecha"
-                  name="fecha"
                   type="date"
                   className="pl-8"
                   value={bloqueadoForm.fecha}
-                  onChange={handleBloqueadoChange}
+                  onChange={(e) => handleBloqueadoChange('fecha', e.target.value)}
                   required
                 />
               </div>
@@ -736,10 +743,9 @@ const NegocioHorariosPage = () => {
                 <Label htmlFor="hora_inicio">Hora Inicio</Label>
                 <Input
                   id="hora_inicio"
-                  name="hora_inicio"
                   type="time"
                   value={bloqueadoForm.hora_inicio}
-                  onChange={handleBloqueadoChange}
+                  onChange={(e) => handleBloqueadoChange('hora_inicio', e.target.value)}
                   required
                 />
               </div>
@@ -748,10 +754,9 @@ const NegocioHorariosPage = () => {
                 <Label htmlFor="hora_fin">Hora Fin</Label>
                 <Input
                   id="hora_fin"
-                  name="hora_fin"
                   type="time"
                   value={bloqueadoForm.hora_fin}
-                  onChange={handleBloqueadoChange}
+                  onChange={(e) => handleBloqueadoChange('hora_fin', e.target.value)}
                   required
                 />
               </div>
@@ -761,9 +766,8 @@ const NegocioHorariosPage = () => {
               <Label htmlFor="motivo">Motivo (opcional)</Label>
               <Input
                 id="motivo"
-                name="motivo"
                 value={bloqueadoForm.motivo}
-                onChange={handleBloqueadoChange}
+                onChange={(e) => handleBloqueadoChange('motivo', e.target.value)}
                 placeholder="Ej: Reunión, descanso, etc."
               />
             </div>
