@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthState, Usuario, Negocio } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   auth: AuthState;
@@ -39,61 +40,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Mock login - En una implementación real, esto se conectaría a Supabase
+  // Login usando nuestra tabla personalizada de usuarios
   const login = async (usuario: string, contrasena: string): Promise<boolean> => {
-    // Simulando una verificación de credenciales
-    // En producción, esto sería una llamada a Supabase
-    if (usuario === 'admin' && contrasena === 'admin') {
-      const adminUser: Usuario = {
-        id: '1',
-        rol: 'admin',
-        usuario: 'admin',
-        contrasena: 'admin', // En realidad no almacenaríamos esto en el estado
-        creado_en: new Date().toISOString()
-      };
+    try {
+      // Consultar la tabla de usuarios personalizada
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('usuario', usuario)
+        .eq('contrasena', contrasena)
+        .single();
+
+      if (error || !data) {
+        console.error('Error de autenticación:', error);
+        return false;
+      }
+
+      const usuarioAutenticado: Usuario = data;
+
+      let negocioData: Negocio | null = null;
+
+      // Si es un usuario de tipo negocio, obtenemos los datos del negocio
+      if (usuarioAutenticado.rol === 'negocio') {
+        const { data: negocioResult, error: negocioError } = await supabase
+          .from('negocios')
+          .select('*')
+          .eq('usuario_id', usuarioAutenticado.id)
+          .single();
+
+        if (negocioError) {
+          console.error('Error al obtener datos del negocio:', negocioError);
+        } else if (negocioResult) {
+          negocioData = negocioResult;
+        }
+      }
 
       const newAuth: AuthState = {
         isAuthenticated: true,
-        usuario: adminUser,
-        negocio: null
+        usuario: usuarioAutenticado,
+        negocio: negocioData,
       };
 
       setAuth(newAuth);
       localStorage.setItem('auth', JSON.stringify(newAuth));
       return true;
+    } catch (error) {
+      console.error('Error en login:', error);
+      return false;
     }
-
-    // Simular login de negocio (en producción sería una consulta a Supabase)
-    // Aquí simplemente tenemos un usuario de prueba
-    if (usuario === 'negocio' && contrasena === 'negocio') {
-      const negocioUser: Usuario = {
-        id: '2',
-        rol: 'negocio',
-        usuario: 'negocio',
-        contrasena: 'negocio', // En realidad no almacenaríamos esto en el estado
-        creado_en: new Date().toISOString()
-      };
-
-      const negocioEntity: Negocio = {
-        id: '1',
-        usuario_id: '2',
-        nombre: 'Peluquería Ejemplo',
-        slug: 'peluqueria-ejemplo',
-        creado_en: new Date().toISOString()
-      };
-
-      const newAuth: AuthState = {
-        isAuthenticated: true,
-        usuario: negocioUser,
-        negocio: negocioEntity
-      };
-
-      setAuth(newAuth);
-      localStorage.setItem('auth', JSON.stringify(newAuth));
-      return true;
-    }
-
-    return false;
   };
 
   const logout = () => {

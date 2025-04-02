@@ -9,13 +9,292 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      bloqueos_temporales: {
+        Row: {
+          creado_en: string | null
+          expira_en: string
+          fecha: string
+          hora_fin: string
+          hora_inicio: string
+          id: string
+          negocio_id: string | null
+        }
+        Insert: {
+          creado_en?: string | null
+          expira_en: string
+          fecha: string
+          hora_fin: string
+          hora_inicio: string
+          id?: string
+          negocio_id?: string | null
+        }
+        Update: {
+          creado_en?: string | null
+          expira_en?: string
+          fecha?: string
+          hora_fin?: string
+          hora_inicio?: string
+          id?: string
+          negocio_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bloqueos_temporales_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      citas: {
+        Row: {
+          creada_en: string | null
+          estado: string | null
+          fecha: string
+          hora_fin: string
+          hora_inicio: string
+          id: string
+          negocio_id: string | null
+          nombre_cliente: string
+          servicio_id: string | null
+          telefono_cliente: string
+        }
+        Insert: {
+          creada_en?: string | null
+          estado?: string | null
+          fecha: string
+          hora_fin: string
+          hora_inicio: string
+          id?: string
+          negocio_id?: string | null
+          nombre_cliente: string
+          servicio_id?: string | null
+          telefono_cliente: string
+        }
+        Update: {
+          creada_en?: string | null
+          estado?: string | null
+          fecha?: string
+          hora_fin?: string
+          hora_inicio?: string
+          id?: string
+          negocio_id?: string | null
+          nombre_cliente?: string
+          servicio_id?: string | null
+          telefono_cliente?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "citas_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "citas_servicio_id_fkey"
+            columns: ["servicio_id"]
+            isOneToOne: false
+            referencedRelation: "servicios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      horarios_recurrentes: {
+        Row: {
+          dia_semana: string
+          hora_fin: string
+          hora_inicio: string
+          id: string
+          negocio_id: string | null
+        }
+        Insert: {
+          dia_semana: string
+          hora_fin: string
+          hora_inicio: string
+          id?: string
+          negocio_id?: string | null
+        }
+        Update: {
+          dia_semana?: string
+          hora_fin?: string
+          hora_inicio?: string
+          id?: string
+          negocio_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "horarios_recurrentes_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      horas_bloqueadas: {
+        Row: {
+          fecha: string
+          hora_fin: string
+          hora_inicio: string
+          id: string
+          negocio_id: string | null
+        }
+        Insert: {
+          fecha: string
+          hora_fin: string
+          hora_inicio: string
+          id?: string
+          negocio_id?: string | null
+        }
+        Update: {
+          fecha?: string
+          hora_fin?: string
+          hora_inicio?: string
+          id?: string
+          negocio_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "horas_bloqueadas_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      negocios: {
+        Row: {
+          creado_en: string | null
+          id: string
+          nombre: string
+          slug: string
+          usuario_id: string | null
+        }
+        Insert: {
+          creado_en?: string | null
+          id?: string
+          nombre: string
+          slug: string
+          usuario_id?: string | null
+        }
+        Update: {
+          creado_en?: string | null
+          id?: string
+          nombre?: string
+          slug?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negocios_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      servicios: {
+        Row: {
+          duracion_minutos: number
+          id: string
+          negocio_id: string | null
+          nombre: string
+        }
+        Insert: {
+          duracion_minutos: number
+          id?: string
+          negocio_id?: string | null
+          nombre: string
+        }
+        Update: {
+          duracion_minutos?: number
+          id?: string
+          negocio_id?: string | null
+          nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "servicios_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solicitudes_negocio: {
+        Row: {
+          correo: string
+          creada_en: string | null
+          estado: string | null
+          id: string
+          mensaje_opcional: string | null
+          nombre_contacto: string
+          nombre_negocio: string
+          slug: string
+          telefono: string
+        }
+        Insert: {
+          correo: string
+          creada_en?: string | null
+          estado?: string | null
+          id?: string
+          mensaje_opcional?: string | null
+          nombre_contacto: string
+          nombre_negocio: string
+          slug: string
+          telefono: string
+        }
+        Update: {
+          correo?: string
+          creada_en?: string | null
+          estado?: string | null
+          id?: string
+          mensaje_opcional?: string | null
+          nombre_contacto?: string
+          nombre_negocio?: string
+          slug?: string
+          telefono?: string
+        }
+        Relationships: []
+      }
+      usuarios: {
+        Row: {
+          contrasena: string
+          creado_en: string | null
+          id: string
+          rol: string
+          usuario: string
+        }
+        Insert: {
+          contrasena: string
+          creado_en?: string | null
+          id?: string
+          rol: string
+          usuario: string
+        }
+        Update: {
+          contrasena?: string
+          creado_en?: string | null
+          id?: string
+          rol?: string
+          usuario?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      eliminar_bloqueos_expirados: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

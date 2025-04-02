@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, Clock, Scissors, Users, ChevronRight, Share2, QrCode } from 'lucide-react';
@@ -13,6 +12,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Input } from '@/components/ui/input';
 
 const NegocioDashboard = () => {
   const { auth } = useAuth();
@@ -22,7 +22,6 @@ const NegocioDashboard = () => {
   const slug = auth.negocio?.slug || 'mi-negocio';
   const shareUrl = `${window.location.origin}/${slug}/cita`;
 
-  // En una implementación real, estos datos vendrían de Supabase
   const stats = {
     citasHoy: 5,
     citasPendientes: 8,
@@ -67,7 +66,6 @@ const NegocioDashboard = () => {
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareUrl);
-    // En una aplicación real, aquí se mostraría un toast de confirmación
   };
 
   return (
@@ -143,7 +141,6 @@ const NegocioDashboard = () => {
         </Card>
       </div>
 
-      {/* Citas recientes */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Citas Recientes</CardTitle>
@@ -181,7 +178,6 @@ const NegocioDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* Dialogs */}
       <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -209,7 +205,6 @@ const NegocioDashboard = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center p-4">
-            {/* En una implementación real, aquí se generaría un código QR real */}
             <div className="w-64 h-64 bg-gray-200 flex items-center justify-center border">
               <QrCode className="w-32 h-32 text-gray-500" />
               <span className="sr-only">Código QR para {shareUrl}</span>
