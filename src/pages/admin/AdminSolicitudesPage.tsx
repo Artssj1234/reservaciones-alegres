@@ -82,17 +82,19 @@ const AdminSolicitudesPage = () => {
 
       if (solicitudError || !solicitudData) throw solicitudError || new Error('No se encontró la solicitud');
 
-      // 3. Crear usuario para el negocio
-      const username = solicitudData.correo.split('@')[0] + Math.floor(Math.random() * 1000);
-      const password = Math.random().toString(36).slice(-8);
+      // Verificar que existan usuario y contraseña en la solicitud
+      if (!solicitudData.usuario || !solicitudData.contrasena) {
+        throw new Error('La solicitud no contiene información de usuario y contraseña');
+      }
 
+      // 3. Crear el usuario en la tabla de usuarios
       const { data: userData, error: userError } = await supabase
         .from('usuarios')
         .insert([
           {
             rol: 'negocio',
-            usuario: username,
-            contrasena: password
+            usuario: solicitudData.usuario,
+            contrasena: solicitudData.contrasena
           }
         ])
         .select()
@@ -113,8 +115,6 @@ const AdminSolicitudesPage = () => {
 
       if (negocioError) throw negocioError;
 
-      // TODO: En un sistema real, aquí enviaríamos un email al negocio con sus credenciales
-
       // 5. Actualizar interfaz
       setSolicitudes(prev => prev.map(sol => 
         sol.id === id ? { ...sol, estado: 'aceptado' } : sol
@@ -122,7 +122,7 @@ const AdminSolicitudesPage = () => {
 
       toast({
         title: "Solicitud aprobada",
-        description: `La solicitud ha sido aprobada exitosamente. Credenciales: ${username} / ${password}`,
+        description: `La solicitud ha sido aprobada exitosamente. El negocio puede iniciar sesión con las credenciales: ${solicitudData.usuario}`,
       });
       
       setDetailsOpen(false);
@@ -320,6 +320,11 @@ const AdminSolicitudesPage = () => {
               <div>
                 <h3 className="font-semibold text-sm text-gray-500">URL personalizada</h3>
                 <p>app.com/{selectedSolicitud.slug}</p>
+              </div>
+              
+              <div>
+                <h3 className="font-semibold text-sm text-gray-500">Usuario</h3>
+                <p>{selectedSolicitud.usuario || "No especificado"}</p>
               </div>
               
               <div>
