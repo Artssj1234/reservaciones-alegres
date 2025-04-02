@@ -19,6 +19,8 @@ export interface SolicitudNegocio {
   estado: 'pendiente' | 'aceptado' | 'rechazado';
   mensaje_opcional: string;
   creada_en: string;
+  usuario: string;
+  contrasena: string;
 }
 
 export interface Negocio {

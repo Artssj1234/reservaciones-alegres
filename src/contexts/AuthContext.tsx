@@ -52,9 +52,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
+      // Ensure these properties exist in the result
+      if (!result.user_id || !result.role) {
+        console.error('Error: Respuesta de login incompleta');
+        return false;
+      }
+
       const usuarioAutenticado: Usuario = {
         id: result.user_id,
-        rol: result.role,
+        rol: result.role as 'admin' | 'negocio',
         usuario: usuario,
         contrasena: '',  // No almacenamos la contraseña en el cliente
         creado_en: new Date().toISOString()

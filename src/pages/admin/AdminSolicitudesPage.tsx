@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -82,47 +81,16 @@ const AdminSolicitudesPage = () => {
 
       if (solicitudError || !solicitudData) throw solicitudError || new Error('No se encontró la solicitud');
 
-      // Verificar que existan usuario y contraseña en la solicitud
-      if (!solicitudData.usuario || !solicitudData.contrasena) {
-        throw new Error('La solicitud no contiene información de usuario y contraseña');
-      }
-
-      // 3. Crear el usuario en la tabla de usuarios
-      const { data: userData, error: userError } = await supabase
-        .from('usuarios')
-        .insert([
-          {
-            rol: 'negocio',
-            usuario: solicitudData.usuario,
-            contrasena: solicitudData.contrasena
-          }
-        ])
-        .select()
-        .single();
-
-      if (userError || !userData) throw userError || new Error('Error al crear usuario');
-
-      // 4. Crear negocio asociado al usuario
-      const { error: negocioError } = await supabase
-        .from('negocios')
-        .insert([
-          {
-            nombre: solicitudData.nombre_negocio,
-            slug: solicitudData.slug,
-            usuario_id: userData.id
-          }
-        ]);
-
-      if (negocioError) throw negocioError;
-
-      // 5. Actualizar interfaz
+      // The trigger will handle user and business creation automatically
+      
+      // 3. Actualizar interfaz
       setSolicitudes(prev => prev.map(sol => 
         sol.id === id ? { ...sol, estado: 'aceptado' } : sol
       ));
 
       toast({
         title: "Solicitud aprobada",
-        description: `La solicitud ha sido aprobada exitosamente. El negocio puede iniciar sesión con las credenciales: ${solicitudData.usuario}`,
+        description: `La solicitud ha sido aprobada exitosamente. El negocio puede iniciar sesión con el usuario: ${solicitudData.usuario}`,
       });
       
       setDetailsOpen(false);

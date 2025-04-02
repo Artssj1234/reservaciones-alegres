@@ -13,7 +13,17 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 
 // Custom login function that uses our database function
 export const customLogin = async (usuario: string, contrasena: string) => {
-  const { data, error } = await supabase.rpc('custom_login', {
+  // We'll use a type for the expected response format
+  type LoginResponse = {
+    success: boolean;
+    message?: string;
+    user_id?: string;
+    role?: string;
+    token?: string;
+    expires_at?: string;
+  };
+
+  const { data, error } = await supabase.rpc<LoginResponse>('custom_login', {
     p_username: usuario,
     p_password: contrasena
   });
@@ -28,7 +38,14 @@ export const customLogin = async (usuario: string, contrasena: string) => {
 
 // Get business data for a user
 export const getBusinessByUserId = async (userId: string) => {
-  const { data, error } = await supabase.rpc('get_business_by_user_id', {
+  // We'll use a type for the expected response format
+  type BusinessResponse = {
+    success: boolean;
+    message?: string;
+    business?: any;
+  };
+
+  const { data, error } = await supabase.rpc<BusinessResponse>('get_business_by_user_id', {
     p_user_id: userId
   });
   
