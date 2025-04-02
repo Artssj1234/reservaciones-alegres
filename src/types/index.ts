@@ -54,6 +54,7 @@ export interface HoraBloqueada {
   hora_inicio: string;
   hora_fin: string;
   motivo?: string;
+  creado_en?: string;
 }
 
 export interface Cita {

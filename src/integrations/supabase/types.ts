@@ -176,24 +176,30 @@ export type Database = {
       }
       horas_bloqueadas: {
         Row: {
+          creado_en: string | null
           fecha: string
           hora_fin: string
           hora_inicio: string
           id: string
+          motivo: string | null
           negocio_id: string | null
         }
         Insert: {
+          creado_en?: string | null
           fecha: string
           hora_fin: string
           hora_inicio: string
           id?: string
+          motivo?: string | null
           negocio_id?: string | null
         }
         Update: {
+          creado_en?: string | null
           fecha?: string
           hora_fin?: string
           hora_inicio?: string
           id?: string
+          motivo?: string | null
           negocio_id?: string | null
         }
         Relationships: [

@@ -31,6 +31,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   getHorariosByNegocioId, 
@@ -72,6 +81,24 @@ const validateHorarioRecurrente = (horario: any): HorarioRecurrente | null => {
   };
 };
 
+// Función para validar los datos de horas bloqueadas
+const validateHoraBloqueada = (bloqueo: any): HoraBloqueada | null => {
+  if (!bloqueo || !bloqueo.fecha || !bloqueo.hora_inicio || !bloqueo.hora_fin) {
+    console.error('Datos incompletos en bloqueo horario:', bloqueo);
+    return null;
+  }
+  
+  return {
+    id: bloqueo.id,
+    negocio_id: bloqueo.negocio_id,
+    fecha: bloqueo.fecha,
+    hora_inicio: bloqueo.hora_inicio,
+    hora_fin: bloqueo.hora_fin,
+    motivo: bloqueo.motivo || '',
+    creado_en: bloqueo.creado_en
+  };
+};
+
 const NegocioHorariosPage = () => {
   const { auth } = useAuth();
   const [activeTab, setActiveTab] = useState<'horarios' | 'bloqueados'>('horarios');
@@ -86,6 +113,7 @@ const NegocioHorariosPage = () => {
   const [deleteBloqueadoId, setDeleteBloqueadoId] = useState<string | null>(null);
   const [editingHorario, setEditingHorario] = useState<HorarioRecurrente | null>(null);
   const [editingBloqueado, setEditingBloqueado] = useState<HoraBloqueada | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   const [horarioForm, setHorarioForm] = useState({
     id: '',
@@ -145,7 +173,15 @@ const NegocioHorariosPage = () => {
         }
         
         if (horasBloqueadasResult.success) {
-          setHorasBloqueadas(horasBloqueadasResult.data);
+          // Validar y filtrar las horas bloqueadas
+          const validatedBloqueados: HoraBloqueada[] = [];
+          horasBloqueadasResult.data.forEach((bloqueo: any) => {
+            const validBloqueo = validateHoraBloqueada(bloqueo);
+            if (validBloqueo) {
+              validatedBloqueados.push(validBloqueo);
+            }
+          });
+          setHorasBloqueadas(validatedBloqueados);
         } else {
           console.error('Error al cargar horas bloqueadas:', horasBloqueadasResult.message);
           toast({
@@ -167,7 +203,7 @@ const NegocioHorariosPage = () => {
     };
     
     loadData();
-  }, [negocioId, toast]);
+  }, [negocioId, toast, refreshTrigger]);
 
   // Horarios recurrentes
   const handleHorarioDialog = (horario: HorarioRecurrente | null = null) => {
@@ -210,6 +246,29 @@ const NegocioHorariosPage = () => {
         return;
       }
       
+      // Validar el formato de hora
+      const horaInicioRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+      const horaFinRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+      
+      if (!horaInicioRegex.test(horarioForm.hora_inicio) || !horaFinRegex.test(horarioForm.hora_fin)) {
+        toast({
+          title: "Formato inválido",
+          description: "El formato de hora debe ser HH:MM (24h).",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Validar que hora inicio sea menor que hora fin
+      if (horarioForm.hora_inicio >= horarioForm.hora_fin) {
+        toast({
+          title: "Error de horario",
+          description: "La hora de inicio debe ser anterior a la hora de fin.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       let result;
       
       if (editingHorario) {
@@ -247,7 +306,7 @@ const NegocioHorariosPage = () => {
         if (result.success) {
           const validatedHorario = validateHorarioRecurrente(result.data);
           if (validatedHorario) {
-            setHorarios([...horarios, validatedHorario]);
+            setHorarios(prev => [...prev, validatedHorario]);
             toast({
               title: "Horario añadido",
               description: "El nuevo horario ha sido añadido correctamente.",
@@ -354,7 +413,41 @@ const NegocioHorariosPage = () => {
         return;
       }
       
+      // Validar el formato de hora
+      const horaInicioRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+      const horaFinRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+      
+      if (!horaInicioRegex.test(bloqueadoForm.hora_inicio) || !horaFinRegex.test(bloqueadoForm.hora_fin)) {
+        toast({
+          title: "Formato inválido",
+          description: "El formato de hora debe ser HH:MM (24h).",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Validar que hora inicio sea menor que hora fin
+      if (bloqueadoForm.hora_inicio >= bloqueadoForm.hora_fin) {
+        toast({
+          title: "Error de horario",
+          description: "La hora de inicio debe ser anterior a la hora de fin.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Validar fecha
+      if (!bloqueadoForm.fecha || new Date(bloqueadoForm.fecha).toString() === 'Invalid Date') {
+        toast({
+          title: "Fecha inválida",
+          description: "Por favor selecciona una fecha válida.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       let result;
+      console.log("Procesando bloqueo horario:", bloqueadoForm);
       
       if (editingBloqueado) {
         // Actualizar hora bloqueada existente
@@ -365,15 +458,20 @@ const NegocioHorariosPage = () => {
           motivo: bloqueadoForm.motivo
         });
         
+        console.log("Respuesta de actualización:", result);
+        
         if (result.success) {
-          setHorasBloqueadas(prev => prev.map(h => 
-            h.id === bloqueadoForm.id ? result.data : h
-          ));
-          
-          toast({
-            title: "Bloqueo actualizado",
-            description: "Los cambios han sido guardados correctamente.",
-          });
+          const validBloqueo = validateHoraBloqueada(result.data);
+          if (validBloqueo) {
+            setHorasBloqueadas(prev => prev.map(h => 
+              h.id === bloqueadoForm.id ? validBloqueo : h
+            ));
+            
+            toast({
+              title: "Bloqueo actualizado",
+              description: "Los cambios han sido guardados correctamente.",
+            });
+          }
         }
       } else {
         // Crear nueva hora bloqueada
@@ -382,21 +480,28 @@ const NegocioHorariosPage = () => {
           fecha: bloqueadoForm.fecha,
           hora_inicio: bloqueadoForm.hora_inicio,
           hora_fin: bloqueadoForm.hora_fin,
-          motivo: bloqueadoForm.motivo
+          motivo: bloqueadoForm.motivo || null
         };
         
+        console.log("Enviando datos de nuevo bloqueo:", bloqueadoData);
         result = await createHoraBloqueada(bloqueadoData);
+        console.log("Respuesta de creación:", result);
         
         if (result.success) {
-          setHorasBloqueadas([...horasBloqueadas, result.data]);
-          toast({
-            title: "Bloqueo añadido",
-            description: "El nuevo bloqueo horario ha sido añadido correctamente.",
-          });
+          const validBloqueo = validateHoraBloqueada(result.data);
+          if (validBloqueo) {
+            setHorasBloqueadas(prev => [...prev, validBloqueo]);
+            setRefreshTrigger(prev => prev + 1);
+            toast({
+              title: "Bloqueo añadido",
+              description: "El nuevo bloqueo horario ha sido añadido correctamente.",
+            });
+          }
         }
       }
       
       if (!result.success) {
+        console.error("Error en resultado:", result);
         toast({
           title: "Error",
           description: result.message || "Ha ocurrido un error al guardar el bloqueo horario.",
@@ -453,7 +558,11 @@ const NegocioHorariosPage = () => {
 
   const formatFecha = (fechaStr: string) => {
     try {
-      return new Date(fechaStr).toLocaleDateString('es-ES');
+      const fecha = new Date(fechaStr);
+      if (isNaN(fecha.getTime())) {
+        return fechaStr;
+      }
+      return fecha.toLocaleDateString('es-ES');
     } catch (e) {
       return fechaStr;
     }
@@ -466,6 +575,16 @@ const NegocioHorariosPage = () => {
       texto: dia.texto,
       franjas: horarios.filter(h => h.dia_semana === dia.valor)
     };
+  });
+  
+  // Función para ordenar horas bloqueadas por fecha más reciente
+  const horasBloqueadasOrdenadas = [...horasBloqueadas].sort((a, b) => {
+    // Primero comparar por fecha
+    const fechaComparacion = new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
+    if (fechaComparacion !== 0) return fechaComparacion;
+    
+    // Si las fechas son iguales, comparar por hora de inicio
+    return a.hora_inicio.localeCompare(b.hora_inicio);
   });
 
   return (
@@ -515,20 +634,20 @@ const NegocioHorariosPage = () => {
                       <p className="text-gray-500 py-2">No hay horarios configurados</p>
                     ) : (
                       <div className="rounded-md border">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b bg-muted/50">
-                              <th className="py-3 px-4 text-left">Hora Inicio</th>
-                              <th className="py-3 px-4 text-left">Hora Fin</th>
-                              <th className="py-3 px-4 text-right">Acciones</th>
-                            </tr>
-                          </thead>
-                          <tbody>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Hora Inicio</TableHead>
+                              <TableHead>Hora Fin</TableHead>
+                              <TableHead className="text-right">Acciones</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
                             {diaTrabajo.franjas.map((franja) => (
-                              <tr key={franja.id} className="border-b">
-                                <td className="py-3 px-4">{franja.hora_inicio}</td>
-                                <td className="py-3 px-4">{franja.hora_fin}</td>
-                                <td className="py-3 px-4 text-right">
+                              <TableRow key={franja.id}>
+                                <TableCell>{franja.hora_inicio}</TableCell>
+                                <TableCell>{franja.hora_fin}</TableCell>
+                                <TableCell className="text-right">
                                   <div className="flex justify-end gap-2">
                                     <Button 
                                       variant="ghost" 
@@ -546,11 +665,11 @@ const NegocioHorariosPage = () => {
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </div>
-                                </td>
-                              </tr>
+                                </TableCell>
+                              </TableRow>
                             ))}
-                          </tbody>
-                        </table>
+                          </TableBody>
+                        </Table>
                       </div>
                     )}
                   </div>
@@ -579,33 +698,33 @@ const NegocioHorariosPage = () => {
               </div>
             ) : (
               <div className="rounded-md border">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="py-3 px-4 text-left">Fecha</th>
-                      <th className="py-3 px-4 text-left">Hora Inicio</th>
-                      <th className="py-3 px-4 text-left">Hora Fin</th>
-                      <th className="py-3 px-4 text-left">Motivo</th>
-                      <th className="py-3 px-4 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {horasBloqueadas.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="py-6 text-center text-gray-500">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Hora Inicio</TableHead>
+                      <TableHead>Hora Fin</TableHead>
+                      <TableHead>Motivo</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {horasBloqueadasOrdenadas.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-gray-500 py-6">
                           No hay horas bloqueadas
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ) : (
-                      horasBloqueadas.map((bloqueado) => (
-                        <tr key={bloqueado.id} className="border-b">
-                          <td className="py-3 px-4">
+                      horasBloqueadasOrdenadas.map((bloqueado) => (
+                        <TableRow key={bloqueado.id}>
+                          <TableCell>
                             {formatFecha(bloqueado.fecha)}
-                          </td>
-                          <td className="py-3 px-4">{bloqueado.hora_inicio}</td>
-                          <td className="py-3 px-4">{bloqueado.hora_fin}</td>
-                          <td className="py-3 px-4">{bloqueado.motivo || '-'}</td>
-                          <td className="py-3 px-4 text-right">
+                          </TableCell>
+                          <TableCell>{bloqueado.hora_inicio}</TableCell>
+                          <TableCell>{bloqueado.hora_fin}</TableCell>
+                          <TableCell>{bloqueado.motivo || '-'}</TableCell>
+                          <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Button 
                                 variant="ghost" 
@@ -623,12 +742,12 @@ const NegocioHorariosPage = () => {
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>
