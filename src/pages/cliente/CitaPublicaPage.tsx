@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,13 +57,18 @@ const CitaPublicaPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [cargandoHorarios, setCargandoHorarios] = useState(false);
   const [diasSeleccionablesMes, setDiasSeleccionablesMes] = useState<Set<string>>(new Set());
+  const [mesActual, setMesActual] = useState<{anio: number, mes: number}>({
+    anio: new Date().getFullYear(),
+    mes: new Date().getMonth() + 1
+  });
   const { toast } = useToast();
   
   const hoy = new Date();
   const limiteMaximo = addMonths(hoy, 2);
 
+  // Cargar negocio y servicios
   useEffect(() => {
-    const cargarDatos = async () => {
+    const cargarDatosIniciales = async () => {
       try {
         setIsLoading(true);
         
@@ -77,7 +82,7 @@ const CitaPublicaPage = () => {
           return;
         }
 
-        // Cargar datos del negocio
+        console.log('Obteniendo negocio por slug:', slug);
         const negocioResult = await getNegocioBySlug(slug);
         
         if (!negocioResult.success || !negocioResult.data) {
@@ -91,14 +96,13 @@ const CitaPublicaPage = () => {
         
         setNegocio(negocioResult.data);
         
-        // Cargar servicios del negocio
+        console.log('Obteniendo servicios para negocio ID:', negocioResult.data.id);
         const serviciosResult = await getServiciosByNegocioId(negocioResult.data.id);
         
         if (serviciosResult.success) {
           const serviciosActivos = serviciosResult.data.filter((s: any) => s.activo);
           setServicios(serviciosActivos);
           
-          // Si no hay servicios, mostrar mensaje
           if (serviciosActivos.length === 0) {
             toast({
               title: "Información",
@@ -114,14 +118,8 @@ const CitaPublicaPage = () => {
           });
         }
         
-        // Cargar días disponibles para el mes actual
-        const anioActual = hoy.getFullYear();
-        const mesActual = hoy.getMonth() + 1;
-        
-        await cargarDiasDisponibles(negocioResult.data.id, anioActual, mesActual);
-        
       } catch (error) {
-        console.error('Error al cargar datos:', error);
+        console.error('Error al cargar datos iniciales:', error);
         toast({
           title: "Error",
           description: "Ocurrió un error al cargar los datos. Intenta de nuevo más tarde.",
@@ -132,12 +130,16 @@ const CitaPublicaPage = () => {
       }
     };
     
-    cargarDatos();
-  }, [slug, toast, hoy]);
+    cargarDatosIniciales();
+  }, [slug, toast]);
   
-  const cargarDiasDisponibles = async (negocioId: string, anio: number, mes: number) => {
+  // Cargar días disponibles cada vez que cambia el mes o el negocio
+  const cargarDiasDisponibles = useCallback(async (anio: number, mes: number) => {
+    if (!negocio?.id) return;
+    
     try {
-      const diasDispResult = await getDiasDisponibles(negocioId, anio, mes);
+      console.log(`Obteniendo días disponibles para negocio ID: ${negocio.id} en año: ${anio}, mes: ${mes}`);
+      const diasDispResult = await getDiasDisponibles(negocio.id, anio, mes);
       
       if (diasDispResult.success && diasDispResult.data) {
         const dias = diasDispResult.data;
@@ -167,8 +169,16 @@ const CitaPublicaPage = () => {
       console.error('Error en cargarDiasDisponibles:', error);
       setDiasDisponibles([]);
     }
-  };
+  }, [negocio?.id, toast]);
+
+  // Efecto para cargar los días disponibles cuando cambia el mes o cuando hay un negocio
+  useEffect(() => {
+    if (negocio?.id) {
+      cargarDiasDisponibles(mesActual.anio, mesActual.mes);
+    }
+  }, [negocio?.id, mesActual, cargarDiasDisponibles]);
   
+  // Cargar horas disponibles cuando cambia el servicio o la fecha
   useEffect(() => {
     const cargarHorasDisponibles = async () => {
       if (!negocio?.id || !formData.servicio_id || !formData.fecha) return;
@@ -181,6 +191,7 @@ const CitaPublicaPage = () => {
         
         const fechaFormateada = format(formData.fecha, 'yyyy-MM-dd');
         
+        console.log(`Obteniendo horarios para negocio: ${negocio.id}, fecha: ${fechaFormateada}, duración: ${servicio.duracion_minutos}`);
         const result = await getHorariosDisponibles(
           negocio.id,
           fechaFormateada,
@@ -215,6 +226,20 @@ const CitaPublicaPage = () => {
     
     cargarHorasDisponibles();
   }, [formData.servicio_id, formData.fecha, negocio?.id, servicios, toast]);
+
+  // Manejar cambio de mes en el calendario
+  const handleMonthChange = (date: Date) => {
+    const nuevoAnio = date.getFullYear();
+    const nuevoMes = date.getMonth() + 1;
+    
+    // Solo actualizar si cambia el mes
+    if (nuevoAnio !== mesActual.anio || nuevoMes !== mesActual.mes) {
+      setMesActual({
+        anio: nuevoAnio,
+        mes: nuevoMes
+      });
+    }
+  };
 
   const handleServicioChange = (servicioId: string) => {
     setFormData(prev => ({
@@ -564,8 +589,8 @@ const CitaPublicaPage = () => {
               {diasSeleccionablesMes.size === 0 && (
                 <div className="text-center p-6 bg-gray-50 rounded-lg">
                   <Info className="mx-auto h-10 w-10 text-blue-500 mb-3" />
-                  <p className="text-gray-700">Este negocio no tiene horarios disponibles configurados.</p>
-                  <p className="text-sm text-gray-500 mt-1">Por favor, contacta directamente con el negocio.</p>
+                  <p className="text-gray-700">Este negocio no tiene horarios disponibles configurados para este mes.</p>
+                  <p className="text-sm text-gray-500 mt-1">Prueba con otro mes o contacta directamente con el negocio.</p>
                 </div>
               )}
               
@@ -578,6 +603,7 @@ const CitaPublicaPage = () => {
                         mode="single"
                         selected={formData.fecha}
                         onSelect={handleFechaChange}
+                        onMonthChange={handleMonthChange}
                         disabled={(date) => {
                           // Deshabilitar fechas pasadas y más de 2 meses en el futuro
                           const today = new Date();
