@@ -1,10 +1,9 @@
 
-
 -- Improved function to get available time slots for a date
 CREATE OR REPLACE FUNCTION public.obtener_horarios_disponibles(
     p_negocio_id UUID,
     p_fecha DATE,
-    p_duracion_minutos INTEGER,
+    p_duracion_minutos INTEGER DEFAULT NULL,
     p_servicio_id UUID DEFAULT NULL
 )
 RETURNS TABLE(
@@ -28,10 +27,10 @@ BEGIN
       WHERE id = p_servicio_id AND negocio_id = p_negocio_id;
       
       IF v_servicio_duracion IS NULL THEN
-          v_servicio_duracion := p_duracion_minutos;
+          v_servicio_duracion := COALESCE(p_duracion_minutos, 30);
       END IF;
   ELSE
-      v_servicio_duracion := p_duracion_minutos;
+      v_servicio_duracion := COALESCE(p_duracion_minutos, 30);
   END IF;
   
   v_intervalo := (v_servicio_duracion || ' minutes')::INTERVAL;
@@ -120,7 +119,7 @@ BEGIN
   ORDER BY 
     s.hora_inicio;
 END;
-$$;
+$$ LANGUAGE plpgsql;
 
 -- Función para obtener días disponibles en un mes
 CREATE OR REPLACE FUNCTION public.obtener_dias_disponibles_mes(
@@ -138,6 +137,9 @@ DECLARE
     v_inicio_mes DATE;
     v_fin_mes DATE;
     v_servicio_duracion INTEGER;
+    v_fecha_temp DATE;
+    v_hay_horario BOOLEAN;
+    v_hay_slots BOOLEAN;
 BEGIN
     -- Calculate first and last day of month
     v_inicio_mes := make_date(p_anio, p_mes, 1);
@@ -148,99 +150,69 @@ BEGIN
         SELECT duracion_minutos INTO v_servicio_duracion
         FROM servicios
         WHERE id = p_servicio_id AND negocio_id = p_negocio_id;
-    ELSE
-        v_servicio_duracion := 30; -- Default duration if no service selected
     END IF;
+    
+    v_servicio_duracion := COALESCE(v_servicio_duracion, 30);
     
     -- Log parameters for debugging
     RAISE NOTICE 'Buscando disponibilidad para negocio: %, año: %, mes: % (desde % hasta %), servicio: %', 
                p_negocio_id, p_anio, p_mes, v_inicio_mes, v_fin_mes, p_servicio_id;
     
-    RETURN QUERY
-    -- For each day in the month
-    WITH dias_mes AS (
-        SELECT generate_series(v_inicio_mes, v_fin_mes, '1 day'::interval)::date as fecha
-    ),
-    dias_con_horario AS (
-        -- Find which weekdays have schedules defined
-        SELECT 
-            dm.fecha,
-            LOWER(trim(to_char(dm.fecha, 'day'))) as dia_semana,
-            EXISTS (
-                SELECT 1 FROM horarios_recurrentes hr
-                WHERE hr.negocio_id = p_negocio_id AND hr.dia_semana = LOWER(trim(to_char(dm.fecha, 'day')))
-            ) as tiene_horario
-        FROM dias_mes dm
-    ),
-    dias_completamente_bloqueados AS (
-        -- Find completely blocked days - days where the entire schedule is blocked
-        SELECT 
-            dch.fecha
-        FROM dias_con_horario dch
-        JOIN horarios_recurrentes hr ON 
-            hr.negocio_id = p_negocio_id AND 
-            hr.dia_semana = LOWER(trim(to_char(dch.fecha, 'day')))
-        LEFT JOIN horas_bloqueadas hb ON 
-            hb.negocio_id = p_negocio_id AND 
-            hb.fecha = dch.fecha AND
-            hb.hora_inicio <= hr.hora_inicio AND 
-            hb.hora_fin >= hr.hora_fin
-        WHERE hb.id IS NOT NULL -- This means entire day schedule is blocked
-        GROUP BY dch.fecha
-    ),
-    dias_sin_slots_disponibles AS (
-        -- Days where all time slots are booked or blocked
-        SELECT 
-            dch.fecha
-        FROM dias_con_horario dch
-        WHERE dch.tiene_horario
-        AND NOT EXISTS (
-            SELECT 1
-            FROM horarios_recurrentes hr
+    -- Loop through each day in the month
+    v_fecha_temp := v_inicio_mes;
+    WHILE v_fecha_temp <= v_fin_mes LOOP
+        -- Check if this weekday has any schedule defined
+        SELECT EXISTS(
+            SELECT 1 FROM horarios_recurrentes hr
             WHERE hr.negocio_id = p_negocio_id 
-            AND hr.dia_semana = LOWER(trim(to_char(dch.fecha, 'day')))
-            AND NOT EXISTS (
-                -- Check if this time slot is fully booked or blocked
-                SELECT 1
-                FROM generate_series(
-                    hr.hora_inicio::time, 
-                    (hr.hora_fin - v_servicio_duracion * interval '1 minute')::time, 
-                    '15 minutes'::interval
-                ) slot_inicio
-                WHERE NOT EXISTS (
-                    -- Check for blocked slots
-                    SELECT 1
-                    FROM horas_bloqueadas hb
-                    WHERE hb.negocio_id = p_negocio_id
-                    AND hb.fecha = dch.fecha
-                    AND (slot_inicio, slot_inicio + (v_servicio_duracion || ' minutes')::interval) OVERLAPS (hb.hora_inicio, hb.hora_fin)
-                )
-                AND NOT EXISTS (
-                    -- Check for booked appointments
-                    SELECT 1
-                    FROM citas c
-                    WHERE c.negocio_id = p_negocio_id
-                    AND c.fecha = dch.fecha
-                    AND c.estado IN ('pendiente', 'aceptada')
-                    AND (slot_inicio, slot_inicio + (v_servicio_duracion || ' minutes')::interval) OVERLAPS (c.hora_inicio, c.hora_fin)
-                )
-            )
-        )
-    )
-    SELECT 
-        dch.fecha,
-        -- A day is available if it has a schedule and is not fully booked or blocked
-        (dch.tiene_horario AND dcb.fecha IS NULL AND dssd.fecha IS NULL) as tiene_disponibilidad,
-        -- Status information
-        CASE
-            WHEN NOT dch.tiene_horario THEN 'sin_horario'
-            WHEN dcb.fecha IS NOT NULL THEN 'completamente_bloqueado'
-            WHEN dssd.fecha IS NOT NULL THEN 'completamente_reservado'
-            ELSE 'disponible'
-        END as estado
-    FROM dias_con_horario dch
-    LEFT JOIN dias_completamente_bloqueados dcb ON dch.fecha = dcb.fecha
-    LEFT JOIN dias_sin_slots_disponibles dssd ON dch.fecha = dssd.fecha
-    ORDER BY dch.fecha;
+            AND hr.dia_semana = LOWER(trim(to_char(v_fecha_temp, 'day')))
+        ) INTO v_hay_horario;
+        
+        -- Skip checking slots if there's no schedule for this day
+        IF NOT v_hay_horario THEN
+            fecha := v_fecha_temp;
+            tiene_disponibilidad := FALSE;
+            estado := 'sin_horario';
+            RETURN NEXT;
+            
+            -- Move to next day
+            v_fecha_temp := v_fecha_temp + interval '1 day';
+            CONTINUE;
+        END IF;
+        
+        -- Check if there are any available slots for this day
+        SELECT EXISTS(
+            SELECT 1
+            FROM obtener_horarios_disponibles(p_negocio_id, v_fecha_temp, v_servicio_duracion, p_servicio_id)
+            WHERE disponible = true
+        ) INTO v_hay_slots;
+        
+        fecha := v_fecha_temp;
+        tiene_disponibilidad := v_hay_slots;
+        
+        -- Add status information
+        IF NOT v_hay_horario THEN
+            estado := 'sin_horario';
+        ELSIF NOT v_hay_slots THEN
+            -- Check why there are no slots
+            IF EXISTS (
+                SELECT 1 FROM horas_bloqueadas
+                WHERE negocio_id = p_negocio_id AND fecha = v_fecha_temp
+            ) THEN
+                estado := 'bloqueado';
+            ELSE
+                estado := 'completamente_reservado';
+            END IF;
+        ELSE
+            estado := 'disponible';
+        END IF;
+        
+        RETURN NEXT;
+        
+        -- Move to next day
+        v_fecha_temp := v_fecha_temp + interval '1 day';
+    END LOOP;
+    
+    RETURN;
 END;
 $$ LANGUAGE plpgsql;

@@ -473,18 +473,27 @@ export const updateUserPassword = async (id: string, nuevaContrasena: string) =>
 export const getHorariosDisponibles = async (
   negocioId: string,
   fecha: string,
-  servicioId: string
+  servicioId?: string
 ): Promise<{ success: boolean; message?: string; data: HorarioDisponible[] }> => {
-  console.log('Obteniendo horarios disponibles para negocio ID:', negocioId, 'en fecha:', fecha, 'para servicio ID:', servicioId);
+  console.log('Obteniendo horarios disponibles para negocio ID:', negocioId, 'en fecha:', fecha, 'para servicio ID:', servicioId || 'undefined');
 
   try {
+    // Construir parámetros para la RPC
+    const params: any = {
+      p_negocio_id: negocioId,
+      p_fecha: fecha
+    };
+    
+    // Solo agregar el servicio_id si está definido
+    if (servicioId && servicioId.trim() !== '') {
+      params.p_servicio_id = servicioId;
+    }
+    
+    console.log('Parámetros para obtener_horarios_disponibles:', params);
+    
     const { data, error } = await supabase.rpc(
       "obtener_horarios_disponibles",
-      {
-        p_negocio_id: negocioId,
-        p_fecha: fecha,
-        p_servicio_id: servicioId
-      }
+      params
     ) as { data: HorarioDisponible[] | null; error: any };
 
     if (error) {
@@ -493,7 +502,7 @@ export const getHorariosDisponibles = async (
     }
 
     const horarios: HorarioDisponible[] = Array.isArray(data) ? data : [];
-
+    
     console.log(`Horarios disponibles recibidos: ${horarios.length} slots`);
     console.log('Disponibles:', horarios.filter(h => h.disponible).length);
     console.log('No disponibles:', horarios.filter(h => !h.disponible).length);
@@ -505,28 +514,28 @@ export const getHorariosDisponibles = async (
   }
 };
 
-
-export const getDiasDisponibles = async (negocioId: string, anio: number, mes: number, servicioId?: string): Promise<{ success: boolean; message?: string; data: DiaDisponible[] }> => {
-  console.log('Obteniendo días disponibles para negocio ID:', negocioId, 'en año:', anio, 'mes:', mes, 'servicio:', servicioId || 'undefined');
+export const getDiasDisponibles = async (
+  negocioId: string, 
+  anio: number, 
+  mes: number, 
+  servicioId?: string
+): Promise<{ success: boolean; message?: string; data: DiaDisponible[] }> => {
+  console.log('Obteniendo días disponibles para negocio ID:', negocioId, 'en año:', anio, 'mes:', mes, 'servicio ID:', servicioId || 'undefined');
   
   try {
-    const params: { 
-      p_negocio_id: string; 
-      p_anio: number; 
-      p_mes: number;
-      p_servicio_id?: string;
-    } = {
+    // Construir parámetros para la RPC
+    const params: any = {
       p_negocio_id: negocioId,
       p_anio: anio,
       p_mes: mes
     };
     
-    // Añadir el servicio_id solo si está definido y no es una cadena vacía
+    // Solo agregar el servicio_id si está definido
     if (servicioId && servicioId.trim() !== '') {
       params.p_servicio_id = servicioId;
     }
     
-    console.log('Parámetros enviados:', params);
+    console.log('Parámetros para obtener_dias_disponibles_mes:', params);
     
     const { data, error } = await supabase.rpc(
       "obtener_dias_disponibles_mes",
@@ -541,13 +550,8 @@ export const getDiasDisponibles = async (negocioId: string, anio: number, mes: n
     // Asegurarnos de que los datos sean del tipo correcto
     const dias: DiaDisponible[] = Array.isArray(data) ? data : [];
     
-    // Agregar logs detallados
-    console.log(`Días recibidos: ${dias.length}`);
+    console.log(`Días disponibles recibidos: ${dias.length}`);
     console.log('Con disponibilidad:', dias.filter(d => d.tiene_disponibilidad).length);
-    console.log('Estado sin_horario:', dias.filter(d => d.estado === 'sin_horario').length);
-    console.log('Estado disponible:', dias.filter(d => d.estado === 'disponible').length);
-    console.log('Estado completamente_bloqueado:', dias.filter(d => d.estado === 'completamente_bloqueado').length);
-    console.log('Estado completamente_reservado:', dias.filter(d => d.estado === 'completamente_reservado').length);
     
     return { success: true, data: dias };
   } catch (err) {
