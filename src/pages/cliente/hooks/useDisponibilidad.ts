@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { getDiasDisponibles, getHorariosDisponibles } from '@/integrations/supabase/client';
@@ -124,7 +125,6 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         const result = await getHorariosDisponibles(
           negocioId,
           fechaFormateada,
-          undefined, // ya no enviamos duracion_minutos manualmente
           servicioIdParaEnviar
         );
 
