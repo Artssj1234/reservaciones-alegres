@@ -122,13 +122,6 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         // Asegurarse que servicioId sea undefined si está vacío
         const servicioIdParaEnviar = servicioId && servicioId.trim() !== '' ? servicioId : undefined;
 
-        if (!servicioIdParaEnviar && servicioId !== '') {
-          console.log("Servicio no válido, no se cargarán horarios");
-          setHorasDisponibles([]);
-          setCargandoHorarios(false);
-          return;
-        }
-
         console.log(`Obteniendo horarios para negocio: ${negocioId}, fecha: ${fechaFormateada}, servicio: ${servicioIdParaEnviar || 'no especificado'}`);
         const result = await getHorariosDisponibles(
           negocioId,
