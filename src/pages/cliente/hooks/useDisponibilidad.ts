@@ -31,6 +31,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
       setIsLoading(true);
       setError(null);
 
+      // Asegurarse que servicioId sea undefined si está vacío para que la función en el backend use la duración predeterminada
       const servicioIdParaEnviar = servicioId && servicioId.trim() !== '' ? servicioId : undefined;
 
       const diasDispResult = await getDiasDisponibles(
@@ -42,17 +43,18 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
 
       if (diasDispResult.success && diasDispResult.data) {
         const dias = diasDispResult.data;
+        console.log("Días disponibles recibidos:", dias);
         setDiasDisponibles(dias);
 
         const fechasDisponibles = new Set<string>();
         dias.forEach(dia => {
+          // Incluimos los días con cualquier tipo de disponibilidad
           if (dia.tiene_disponibilidad || dia.estado === 'disponible' || dia.estado === 'parcialmente_bloqueado') {
             fechasDisponibles.add(format(new Date(dia.fecha), 'yyyy-MM-dd'));
           }
         });
 
         console.log(`Fechas disponibles encontradas: ${fechasDisponibles.size}`, Array.from(fechasDisponibles).join(', '));
-
         setDiasSeleccionablesMes(fechasDisponibles);
 
         if (fechasDisponibles.size === 0) {
@@ -117,15 +119,17 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         setError(null);
 
         const fechaFormateada = format(fecha, 'yyyy-MM-dd');
+        // Asegurarse que servicioId sea undefined si está vacío
         const servicioIdParaEnviar = servicioId && servicioId.trim() !== '' ? servicioId : undefined;
 
-        if (!servicioIdParaEnviar) {
+        if (!servicioIdParaEnviar && servicioId !== '') {
+          console.log("Servicio no válido, no se cargarán horarios");
           setHorasDisponibles([]);
           setCargandoHorarios(false);
           return;
         }
 
-        console.log(`Obteniendo horarios para negocio: ${negocioId}, fecha: ${fechaFormateada}, servicio: ${servicioIdParaEnviar}`);
+        console.log(`Obteniendo horarios para negocio: ${negocioId}, fecha: ${fechaFormateada}, servicio: ${servicioIdParaEnviar || 'no especificado'}`);
         const result = await getHorariosDisponibles(
           negocioId,
           fechaFormateada,
@@ -138,7 +142,6 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
           setHorasDisponibles(horariosDisp);
 
           const horariosDisponibles = horariosDisp.filter(h => h.disponible);
-
           console.log(`Se encontraron ${horariosDisponibles.length} horarios disponibles de ${horariosDisp.length} totales`);
 
           if (horariosDisponibles.length === 0 && horariosDisp.length > 0) {
@@ -171,7 +174,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
       }
     };
 
-    if (negocioId && fecha && servicioId) {
+    if (negocioId && fecha && (servicioId || servicioId === '')) {
       cargarHorasDisponibles();
     } else {
       setHorasDisponibles([]);

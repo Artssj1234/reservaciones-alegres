@@ -40,11 +40,17 @@ const DateTimePicker = ({
   const [fechaSeleccionada, setFechaSeleccionada] = useState<Date | undefined>(date);
   const [horasDisponiblesFiltered, setHorasDisponiblesFiltered] = useState<HorarioDisponible[]>([]);
   
+  useEffect(() => {
+    // Actualizar fechaSeleccionada cuando cambia date (para sincronización)
+    setFechaSeleccionada(date);
+  }, [date]);
+  
   // Filter available times to show only those that are actually available
   useEffect(() => {
     if (horasDisponibles && horasDisponibles.length > 0) {
+      console.log('Filtrando horarios disponibles:', horasDisponibles);
       const filteredHoras = horasDisponibles.filter(hora => hora.disponible);
-      setHorasDisponiblesFiltered(filteredHoras);
+      setHorasDisponiblesFiltered(horasDisponibles); // Mostrar todos pero deshabilitar los no disponibles
       
       // If the currently selected time is no longer available, clear it
       if (selectedTime && !filteredHoras.some(hora => hora.hora_inicio === selectedTime)) {
@@ -54,13 +60,10 @@ const DateTimePicker = ({
       setHorasDisponiblesFiltered([]);
     }
   }, [horasDisponibles, selectedTime, onTimeChange]);
-
-  const handleMonthChangeDebug = (newDate: Date) => {
-    onMonthChange(newDate);
-  };
   
   const handleDateSelect = (newDate: Date | undefined) => {
     if (newDate) {
+      console.log('Fecha seleccionada:', format(newDate, 'yyyy-MM-dd'));
       setFechaSeleccionada(newDate);
       onDateChange(newDate);
       
@@ -79,6 +82,14 @@ const DateTimePicker = ({
   if (cargandoHorarios && horasDisponibles.length === 0) {
     return <NoAvailabilityAlert cargandoHorarios={true} onBack={onBack} />;
   }
+  
+  // Helper function para formatear fecha
+  const format = (date: Date, formatStr: string) => {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${year}-${month}-${day}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -89,7 +100,7 @@ const DateTimePicker = ({
           fechaSeleccionada={fechaSeleccionada}
           diasSeleccionablesMes={diasSeleccionablesMes}
           onDateSelect={handleDateSelect}
-          onMonthChange={handleMonthChangeDebug}
+          onMonthChange={onMonthChange}
         />
         
         <TimeSlotGrid 

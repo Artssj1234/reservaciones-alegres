@@ -479,7 +479,7 @@ export const getHorariosDisponibles = async (
 
   try {
     // Construir parámetros para la RPC
-    const params: any = {
+    const params: Record<string, any> = {
       p_negocio_id: negocioId,
       p_fecha: fecha
     };
@@ -527,7 +527,7 @@ export const getDiasDisponibles = async (
   
   try {
     // Construir parámetros para la RPC
-    const params: any = {
+    const params: Record<string, any> = {
       p_negocio_id: negocioId,
       p_anio: anio,
       p_mes: mes

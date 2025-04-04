@@ -78,6 +78,8 @@ const TimeSlotGrid = ({
                 : 'border hover:border-green-500 hover:bg-green-50'
             }`}
             onClick={() => onTimeChange(hora.hora_inicio)}
+            disabled={!hora.disponible}
+            title={hora.disponible ? 'Disponible' : hora.estado || 'No disponible'}
           >
             <Clock className={`h-4 w-4 mb-1 ${selectedTime === hora.hora_inicio ? 'text-white' : 'text-gray-500'}`} />
             <span className="text-center">{hora.hora_inicio.substring(0, 5)}</span>
