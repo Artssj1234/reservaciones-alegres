@@ -25,43 +25,51 @@ const DatePickerCalendar = ({
   const esDiaDisponible = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const isAvailable = diasSeleccionablesMes.has(dateStr);
-    console.log(`Checking availability for ${dateStr}: ${isAvailable}`);
     return isAvailable;
   };
 
   if (diasSeleccionablesMes.size === 0) {
     return (
-      <div className="text-center p-4 bg-gray-50 rounded-lg">
+      <div className="text-center p-6 bg-gray-50 rounded-lg">
         <Info className="mx-auto h-6 w-6 text-blue-500 mb-3" />
-        <p className="text-gray-700">No hay horarios configurados para este mes.</p>
+        <p className="text-gray-700 font-medium">No hay horarios disponibles</p>
         <p className="text-sm text-gray-500 mt-1">
-          El negocio debe configurar los horarios regulares en la sección de administración.
+          Por favor intenta más tarde o contacta con el negocio directamente.
         </p>
       </div>
     );
   }
 
   return (
-    <Calendar
-      mode="single"
-      selected={fechaSeleccionada}
-      onSelect={onDateSelect}
-      onMonthChange={onMonthChange}
-      disabled={(date) => {
-        // Deshabilitar fechas pasadas y más de 2 meses en el futuro
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        if (isBefore(date, today) || isAfter(date, limiteMaximo)) {
-          return true;
-        }
-        
-        // Verificar disponibilidad según los días disponibles
-        return !esDiaDisponible(date);
-      }}
-      locale={es}
-      initialFocus
-    />
+    <div className="border rounded-md p-4 bg-white">
+      <h3 className="font-medium text-lg mb-4">Selecciona un día</h3>
+      <Calendar
+        mode="single"
+        selected={fechaSeleccionada}
+        onSelect={onDateSelect}
+        onMonthChange={onMonthChange}
+        disabled={(date) => {
+          // Deshabilitar fechas pasadas y más de 2 meses en el futuro
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          if (isBefore(date, today) || isAfter(date, limiteMaximo)) {
+            return true;
+          }
+          
+          // Verificar disponibilidad según los días disponibles
+          return !esDiaDisponible(date);
+        }}
+        locale={es}
+        initialFocus
+        className="p-3 pointer-events-auto"
+        classNames={{
+          day_selected: "bg-green-500 text-white hover:bg-green-600 hover:text-white focus:bg-green-500 focus:text-white",
+          day_today: "bg-gray-100 text-black",
+          head_cell: "text-gray-500 font-medium"
+        }}
+      />
+    </div>
   );
 };
 

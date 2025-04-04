@@ -1,11 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Clock } from 'lucide-react';
 import { HorarioDisponible } from '@/types';
 import { useToast } from '@/components/ui/use-toast';
-import { Badge } from '@/components/ui/badge';
 import DatePickerCalendar from './DatePickerCalendar';
 import TimeSlotGrid from './TimeSlotGrid';
 import NoAvailabilityAlert from './NoAvailabilityAlert';
@@ -47,11 +44,8 @@ const DateTimePicker = ({
       const filteredHoras = horasDisponibles.filter(hora => hora.disponible);
       setHorasDisponiblesFiltered(filteredHoras);
       
-      console.log(`Filtered available times: ${filteredHoras.length} of ${horasDisponibles.length} total slots`);
-      
       // If the currently selected time is no longer available, clear it
       if (selectedTime && !filteredHoras.some(hora => hora.hora_inicio === selectedTime)) {
-        console.log(`Selected time ${selectedTime} is no longer available`);
         onTimeChange('');
       }
     } else {
@@ -60,15 +54,11 @@ const DateTimePicker = ({
   }, [horasDisponibles, selectedTime, onTimeChange]);
 
   const handleMonthChangeDebug = (newDate: Date) => {
-    console.log('Month changed:', {
-      newDate: newDate
-    });
     onMonthChange(newDate);
   };
   
   const handleDateSelect = (newDate: Date | undefined) => {
     if (newDate) {
-      console.log('Date selected:', newDate);
       setFechaSeleccionada(newDate);
       onDateChange(newDate);
       
@@ -89,50 +79,42 @@ const DateTimePicker = ({
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-medium text-center">Selecciona fecha y hora</h2>
-      
-      <div className="flex justify-center">
-        <Badge variant="outline" className="bg-blue-50">
-          <Clock className="h-3 w-3 mr-1" />
-          Duración del servicio: {duracionServicio} minutos
-        </Badge>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="max-w-4xl mx-auto p-4">
+      <div className="space-y-6">
         <div>
-          <Label className="mb-2 block">Fecha</Label>
-          <div className="border rounded-md p-3">
-            <DatePickerCalendar 
-              fechaSeleccionada={fechaSeleccionada}
-              diasSeleccionablesMes={diasSeleccionablesMes}
-              onDateSelect={handleDateSelect}
-              onMonthChange={handleMonthChangeDebug}
-            />
-          </div>
+          <h1 className="text-2xl font-bold text-center">Reserva tu cita</h1>
+          <p className="text-center text-gray-600">Selecciona la fecha y hora que prefieras para tu cita</p>
         </div>
         
-        <div>
-          <Label className="mb-2 block">Hora Disponible</Label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <DatePickerCalendar 
+            fechaSeleccionada={fechaSeleccionada}
+            diasSeleccionablesMes={diasSeleccionablesMes}
+            onDateSelect={handleDateSelect}
+            onMonthChange={handleMonthChangeDebug}
+          />
+          
           <TimeSlotGrid 
             horasDisponiblesFiltered={horasDisponiblesFiltered}
             selectedTime={selectedTime}
             onTimeChange={onTimeChange}
             cargandoHorarios={cargandoHorarios}
+            fecha={fechaSeleccionada}
           />
         </div>
-      </div>
-      
-      <div className="flex justify-between">
-        <Button variant="outline" onClick={onBack}>
-          Atrás
-        </Button>
-        <Button 
-          onClick={onNext} 
-          disabled={!selectedTime || diasSeleccionablesMes.size === 0}
-        >
-          Siguiente
-        </Button>
+        
+        <div className="flex justify-between pt-4">
+          <Button variant="outline" onClick={onBack}>
+            Atrás
+          </Button>
+          <Button 
+            onClick={onNext} 
+            disabled={!selectedTime || diasSeleccionablesMes.size === 0}
+            className="bg-green-500 hover:bg-green-600"
+          >
+            Continuar
+          </Button>
+        </div>
       </div>
     </div>
   );

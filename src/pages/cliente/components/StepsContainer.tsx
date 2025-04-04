@@ -1,51 +1,46 @@
 
-import React from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import React, { ReactNode } from 'react';
 import StepsIndicator from './StepsIndicator';
-import { Clock } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Search } from 'lucide-react';
 
 interface StepsContainerProps {
+  children: ReactNode;
   title: string;
-  description?: string;
   currentStep: number;
-  children: React.ReactNode;
-  onVerificarClick?: () => void;
+  onVerificarClick: () => void;
 }
 
-const StepsContainer = ({ 
-  title, 
-  description = 'Reserva tu cita online en unos simples pasos', 
-  currentStep, 
-  children, 
-  onVerificarClick 
-}: StepsContainerProps) => {
+const StepsContainer = ({ children, title, currentStep, onVerificarClick }: StepsContainerProps) => {
   return (
-    <div className="container max-w-3xl mx-auto px-4 py-8">
-      <Card className="mb-8">
-        <CardHeader className="text-center border-b">
-          <CardTitle className="text-2xl">{title}</CardTitle>
-          <CardDescription>
-            {description}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <StepsIndicator currentStep={currentStep} />
+    <div className="max-w-4xl mx-auto p-4">
+      <header className="mb-8">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-xl md:text-2xl font-bold text-green-600">{title}</h1>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1 border-green-500 text-green-700 hover:bg-green-50"
+            onClick={onVerificarClick}
+          >
+            <Search className="h-4 w-4" />
+            <span className="hidden md:inline">Verificar cita</span>
+          </Button>
+        </div>
+        
+        <StepsIndicator currentStep={currentStep} />
+      </header>
+      
+      <Card className="shadow-sm">
+        <CardContent className="p-6">
           {children}
         </CardContent>
-        {onVerificarClick && (
-          <CardFooter className="flex justify-center border-t p-4">
-            <Button 
-              variant="ghost" 
-              onClick={onVerificarClick}
-              className="text-sm"
-            >
-              <Clock className="mr-2 h-4 w-4" />
-              Verificar estado de cita
-            </Button>
-          </CardFooter>
-        )}
       </Card>
+      
+      <footer className="mt-8 text-center text-sm text-gray-500">
+        <p>©️ {new Date().getFullYear()} Gestión de Citas. Todos los derechos reservados.</p>
+      </footer>
     </div>
   );
 };
