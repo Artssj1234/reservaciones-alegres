@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getNegocioByUserId } from '@/integrations/supabase/client';
+import { getBusinessByUserId } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
@@ -10,17 +10,17 @@ import HorariosRecurrentesForm from './components/HorariosRecurrentesForm';
 import HorasBloqueadasForm from './components/HorasBloqueadasForm';
 
 const NegocioHorariosPage = () => {
-  const { currentUser } = useAuth();
+  const { auth } = useAuth();
   const { toast } = useToast();
   
   const { data: negocio, isLoading, error } = useQuery({
-    queryKey: ['negocio', currentUser?.id],
+    queryKey: ['negocio', auth?.usuario?.id],
     queryFn: async () => {
-      if (!currentUser?.id) {
+      if (!auth?.usuario?.id) {
         throw new Error("Usuario no autenticado");
       }
       
-      const result = await getNegocioByUserId(currentUser.id);
+      const result = await getBusinessByUserId(auth.usuario.id);
       
       if (!result.success || !result.business) {
         throw new Error(result.message || "Error al cargar datos del negocio");
@@ -28,7 +28,7 @@ const NegocioHorariosPage = () => {
       
       return result.business;
     },
-    enabled: !!currentUser?.id
+    enabled: !!auth?.usuario?.id
   });
 
   if (isLoading) {
