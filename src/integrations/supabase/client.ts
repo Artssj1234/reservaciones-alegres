@@ -563,45 +563,7 @@ export const getDiasDisponibles = async (
       return { success: false, message: error.message, data: [] };
     }
     
-    // Asegurarnos de que los datos sean del tipo correcto
-    const dias: DiaDisponible[] = Array.isArray(data) ? data : [];
     
-    console.log(`Días disponibles recibidos: ${dias.length}`);
-    console.log('Con disponibilidad:', dias.filter(d => d.tiene_disponibilidad).length);
-    
-    return { success: true, data: dias };
-  } catch (err) {
-    console.error('Error en getDiasDisponibles:', err);
-    return { success: false, message: 'Error al procesar la solicitud', data: [] };
-  }
-};
-
-export const verificarDisponibilidad = async (negocioId: string, fecha: string, horaInicio: string, horaFin: string) => {
-  console.log('Verificando disponibilidad para negocio ID:', negocioId, 'fecha:', fecha, 'hora inicio:', horaInicio, 'hora fin:', horaFin);
-  
-  try {
-    const { data, error } = await supabase.rpc(
-      "verificar_disponibilidad",
-      {
-        p_negocio_id: negocioId,
-        p_fecha: fecha,
-        p_hora_inicio: horaInicio,
-        p_hora_fin: horaFin
-      }
-    );
-    
-    if (error) {
-      console.error('Error al verificar disponibilidad:', error);
-      return { success: false, message: error.message, disponible: false };
-    }
-    
-    return { success: true, disponible: data || false };
-  } catch (err) {
-    console.error('Error en verificarDisponibilidad:', err);
-    return { success: false, message: 'Error al procesar la solicitud', disponible: false };
-  }
-};
-
 // Obtener información completa de un negocio por su slug (para clientes)
 export const getNegocioBySlug = async (slug: string) => {
   console.log('Obteniendo negocio por slug:', slug);
