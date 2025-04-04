@@ -1,4 +1,3 @@
-
 export type Role = 'admin' | 'negocio';
 
 export interface Usuario {
@@ -80,10 +79,11 @@ export interface HorarioDisponible {
   hora_inicio: string;
   hora_fin: string;
   disponible: boolean;
+  estado?: string;
 }
 
 export interface DiaDisponible {
   fecha: string;
   tiene_disponibilidad: boolean;
-  estado: string; // Adding the estado property that's coming from the API
+  estado?: string;
 }

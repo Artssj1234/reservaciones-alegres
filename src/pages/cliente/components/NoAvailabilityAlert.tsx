@@ -31,6 +31,8 @@ const NoAvailabilityAlert = ({ cargandoHorarios, onBack, error }: NoAvailability
     );
   }
 
+  const errorMessage = error || "No se encontró disponibilidad. Por favor, selecciona otro servicio o contacta directamente con el negocio.";
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-center mb-4">Selecciona fecha y hora</h2>
@@ -38,7 +40,7 @@ const NoAvailabilityAlert = ({ cargandoHorarios, onBack, error }: NoAvailability
       <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-800">
         <AlertCircle className="h-4 w-4 mr-2" />
         <AlertDescription>
-          {error || "No se pudo cargar la disponibilidad. Intenta más tarde."}
+          {errorMessage}
         </AlertDescription>
       </Alert>
       

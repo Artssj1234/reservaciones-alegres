@@ -21,7 +21,10 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
   const { toast } = useToast();
 
   const cargarDiasDisponibles = useCallback(async (anio: number, mes: number) => {
-    if (!negocioId) return;
+    if (!negocioId) {
+      console.log("No negocioId provided, can't load available days");
+      return;
+    }
 
     try {
       console.log(`Obteniendo días disponibles para negocio ID: ${negocioId} en año: ${anio}, mes: ${mes}, servicio: ${servicioId}`);
@@ -53,11 +56,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         setDiasSeleccionablesMes(fechasDisponibles);
 
         if (fechasDisponibles.size === 0) {
-          toast({
-            title: "Información",
-            description: "No hay horarios disponibles para este mes.",
-            duration: 5000,
-          });
+          console.log("No hay fechas disponibles para este mes");
         }
       } else {
         console.error('Error al cargar días disponibles:', diasDispResult.message);
@@ -172,7 +171,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
       }
     };
 
-    if (negocioId && fecha) {
+    if (negocioId && fecha && servicioId) {
       cargarHorasDisponibles();
     } else {
       setHorasDisponibles([]);

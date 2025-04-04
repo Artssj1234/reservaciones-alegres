@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { createCita, getCitaByTelefono } from '@/integrations/supabase/client';
+import { createCita, getCitaByTelefono, verificarDisponibilidad } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
 interface CitaFormData {
@@ -108,12 +108,30 @@ export const useCitaForm = (negocioId: string | undefined) => {
       const totalMinutos = horas * 60 + minutos + servicio.duracion_minutos;
       const horaFin = `${String(Math.floor(totalMinutos / 60)).padStart(2, '0')}:${String(totalMinutos % 60).padStart(2, '0')}`;
       
+      // Verificar disponibilidad antes de crear la cita
+      const fechaFormateada = format(formData.fecha, 'yyyy-MM-dd');
+      const disponibilidadResult = await verificarDisponibilidad(
+        negocioId, 
+        fechaFormateada, 
+        formData.hora_inicio, 
+        horaFin
+      );
+      
+      if (!disponibilidadResult.success || !disponibilidadResult.disponible) {
+        toast({
+          title: "Horario no disponible",
+          description: "El horario seleccionado ya no está disponible. Por favor, selecciona otro horario.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       const nuevaCita = {
         negocio_id: negocioId,
         nombre_cliente: formData.nombre_cliente,
         telefono_cliente: formData.telefono_cliente,
         servicio_id: formData.servicio_id,
-        fecha: format(formData.fecha, 'yyyy-MM-dd'),
+        fecha: fechaFormateada,
         hora_inicio: formData.hora_inicio,
         hora_fin: horaFin,
         estado: 'pendiente'

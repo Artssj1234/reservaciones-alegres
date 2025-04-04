@@ -484,9 +484,12 @@ export const getHorariosDisponibles = async (
       p_fecha: fecha
     };
     
-    // Solo agregar el servicio_id si está definido
+    // Si tenemos ID de servicio, agregarlo a los parámetros
     if (servicioId && servicioId.trim() !== '') {
       params.p_servicio_id = servicioId;
+    } else {
+      // Si no hay servicio, usar duración predeterminada de 30 minutos
+      params.p_duracion_minutos = 30;
     }
     
     console.log('Parámetros para obtener_horarios_disponibles:', params);
@@ -563,22 +566,27 @@ export const getDiasDisponibles = async (
 export const verificarDisponibilidad = async (negocioId: string, fecha: string, horaInicio: string, horaFin: string) => {
   console.log('Verificando disponibilidad para negocio ID:', negocioId, 'fecha:', fecha, 'hora inicio:', horaInicio, 'hora fin:', horaFin);
   
-  const { data, error } = await supabase.rpc(
-    "verificar_disponibilidad",
-    {
-      p_negocio_id: negocioId,
-      p_fecha: fecha,
-      p_hora_inicio: horaInicio,
-      p_hora_fin: horaFin
+  try {
+    const { data, error } = await supabase.rpc(
+      "verificar_disponibilidad",
+      {
+        p_negocio_id: negocioId,
+        p_fecha: fecha,
+        p_hora_inicio: horaInicio,
+        p_hora_fin: horaFin
+      }
+    );
+    
+    if (error) {
+      console.error('Error al verificar disponibilidad:', error);
+      return { success: false, message: error.message, disponible: false };
     }
-  );
-  
-  if (error) {
-    console.error('Error al verificar disponibilidad:', error);
-    return { success: false, message: error.message, disponible: false };
+    
+    return { success: true, disponible: data || false };
+  } catch (err) {
+    console.error('Error en verificarDisponibilidad:', err);
+    return { success: false, message: 'Error al procesar la solicitud', disponible: false };
   }
-  
-  return { success: true, disponible: data || false };
 };
 
 // Obtener información completa de un negocio por su slug (para clientes)

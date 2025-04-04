@@ -528,7 +528,7 @@ export type Database = {
           p_negocio_id: string
           p_anio: number
           p_mes: number
-          p_servicio_id: string
+          p_servicio_id?: string
         }
         Returns: {
           fecha: string
@@ -541,7 +541,7 @@ export type Database = {
             Args: {
               p_negocio_id: string
               p_fecha: string
-              p_duracion_minutos: number
+              p_duracion_minutos?: number
               p_servicio_id?: string
             }
             Returns: {
