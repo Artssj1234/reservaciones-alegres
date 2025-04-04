@@ -608,44 +608,5 @@ export const getCitaByTelefono = async (telefono: string) => {
   
   return { success: true, data: data || [] };
 };
-// Obtener días con disponibilidad en un mes
-export const getDiasDisponibles = async (
-  negocioId: string,
-  servicioId: string,
-  anio: number,
-  mes: number
-): Promise<number[]> => {
-  const { data, error } = await supabase.rpc("obtener_dias_disponibles", {
-    p_negocio_id: negocioId,
-    p_servicio_id: servicioId,
-    p_anio: anio,
-    p_mes: mes,
-  });
 
-  if (error) {
-    console.error("Error al obtener días disponibles:", error);
-    return [];
-  }
-
-  return data;
-};
-
-// Obtener horas disponibles en un día
-export const getHorariosDisponibles = async (
-  negocioId: string,
-  servicioId: string,
-  fecha: Date
-): Promise<string[]> => {
-  const { data, error } = await supabase.rpc("obtener_horas_disponibles", {
-    p_negocio_id: negocioId,
-    p_servicio_id: servicioId,
-    p_fecha: fecha.toISOString().slice(0, 10),
-  });
-
-  if (error) {
-    console.error("Error al obtener horas disponibles:", error);
-    return [];
-  }
-
-  return data.map((d) => d.hora); // porque la función retorna table(hora text)
-};
+   
