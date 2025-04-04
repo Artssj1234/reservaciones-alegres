@@ -562,7 +562,7 @@ export const getDiasDisponibles = async (
       console.error('Error al obtener días disponibles:', error);
       return { success: false, message: error.message, data: [] };
     }
-    
+  };
     
 // Obtener información completa de un negocio por su slug (para clientes)
 export const getNegocioBySlug = async (slug: string) => {
