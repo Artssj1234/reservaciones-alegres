@@ -557,14 +557,17 @@ export const getDiasDisponibles = async (
       params
     ) as { data: DiaDisponible[] | null, error: any };
     
-    if (error) {
+       if (error) {
       console.error('Error al obtener días disponibles:', error);
       return { success: false, message: error.message, data: [] };
     }
-    
-    
+
+    return { success: true, data };
+  }; // 👈 esta llave y punto y coma CIERRAN la función correctamente
+
 // Obtener información completa de un negocio por su slug (para clientes)
 export const getNegocioBySlug = async (slug: string) => {
+
   console.log('Obteniendo negocio por slug:', slug);
   
   const { data, error } = await supabase
