@@ -11,6 +11,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
   const [diasSeleccionablesMes, setDiasSeleccionablesMes] = useState<Set<string>>(new Set());
   const [cargandoHorarios, setCargandoHorarios] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [mesActual, setMesActual] = useState<{anio: number, mes: number}>(
     {
       anio: new Date().getFullYear(),
@@ -25,6 +26,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
     try {
       console.log(`Obteniendo días disponibles para negocio ID: ${negocioId} en año: ${anio}, mes: ${mes}, servicio: ${servicioId}`);
       setIsLoading(true);
+      setError(null);
 
       const servicioIdParaEnviar = servicioId && servicioId.trim() !== '' ? servicioId : undefined;
 
@@ -59,6 +61,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         }
       } else {
         console.error('Error al cargar días disponibles:', diasDispResult.message);
+        setError("No se pudo cargar la disponibilidad. Intenta más tarde.");
         toast({
           title: "Error",
           description: "No se pudo cargar la disponibilidad. Intenta más tarde.",
@@ -69,6 +72,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
       }
     } catch (error) {
       console.error('Error en cargarDiasDisponibles:', error);
+      setError("Ocurrió un error al cargar la disponibilidad.");
       toast({
         title: "Error",
         description: "Ocurrió un error al cargar la disponibilidad.",
@@ -111,6 +115,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
       try {
         console.log(`Loading time slots for date: ${format(fecha, 'yyyy-MM-dd')}`);
         setCargandoHorarios(true);
+        setError(null);
 
         const fechaFormateada = format(fecha, 'yyyy-MM-dd');
         const servicioIdParaEnviar = servicioId && servicioId.trim() !== '' ? servicioId : undefined;
@@ -145,6 +150,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
           }
         } else {
           console.error('Error al cargar horas disponibles:', result.message);
+          setError("No se pudo cargar los horarios disponibles.");
           toast({
             title: "Error",
             description: "No se pudo cargar los horarios disponibles.",
@@ -154,6 +160,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         }
       } catch (error) {
         console.error('Error al cargar horas disponibles:', error);
+        setError("Ocurrió un error al cargar los horarios.");
         toast({
           title: "Error",
           description: "Ocurrió un error al cargar los horarios.",
@@ -178,6 +185,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
     diasSeleccionablesMes,
     cargandoHorarios,
     isLoading,
+    error,
     cargarDiasDisponibles,
     handleMonthChange
   };

@@ -14,6 +14,7 @@ interface DateTimePickerProps {
   horasDisponibles: HorarioDisponible[];
   cargandoHorarios: boolean;
   duracionServicio: number;
+  error?: string;
   onDateChange: (date: Date) => void;
   onTimeChange: (hora: string) => void;
   onMonthChange: (date: Date) => void;
@@ -28,6 +29,7 @@ const DateTimePicker = ({
   horasDisponibles,
   cargandoHorarios,
   duracionServicio,
+  error,
   onDateChange,
   onTimeChange,
   onMonthChange,
@@ -70,8 +72,8 @@ const DateTimePicker = ({
   };
 
   // Show error message if no available days and not in loading state
-  if (diasSeleccionablesMes.size === 0 && !cargandoHorarios) {
-    return <NoAvailabilityAlert cargandoHorarios={false} onBack={onBack} />;
+  if ((diasSeleccionablesMes.size === 0 && !cargandoHorarios) || error) {
+    return <NoAvailabilityAlert cargandoHorarios={false} onBack={onBack} error={error} />;
   }
 
   if (cargandoHorarios && horasDisponibles.length === 0) {
@@ -79,42 +81,37 @@ const DateTimePicker = ({
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-center">Reserva tu cita</h1>
-          <p className="text-center text-gray-600">Selecciona la fecha y hora que prefieras para tu cita</p>
-        </div>
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-center mb-4">Selecciona fecha y hora</h2>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <DatePickerCalendar 
+          fechaSeleccionada={fechaSeleccionada}
+          diasSeleccionablesMes={diasSeleccionablesMes}
+          onDateSelect={handleDateSelect}
+          onMonthChange={handleMonthChangeDebug}
+        />
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <DatePickerCalendar 
-            fechaSeleccionada={fechaSeleccionada}
-            diasSeleccionablesMes={diasSeleccionablesMes}
-            onDateSelect={handleDateSelect}
-            onMonthChange={handleMonthChangeDebug}
-          />
-          
-          <TimeSlotGrid 
-            horasDisponiblesFiltered={horasDisponiblesFiltered}
-            selectedTime={selectedTime}
-            onTimeChange={onTimeChange}
-            cargandoHorarios={cargandoHorarios}
-            fecha={fechaSeleccionada}
-          />
-        </div>
-        
-        <div className="flex justify-between pt-4">
-          <Button variant="outline" onClick={onBack}>
-            Atrás
-          </Button>
-          <Button 
-            onClick={onNext} 
-            disabled={!selectedTime || diasSeleccionablesMes.size === 0}
-            className="bg-green-500 hover:bg-green-600"
-          >
-            Continuar
-          </Button>
-        </div>
+        <TimeSlotGrid 
+          horasDisponiblesFiltered={horasDisponiblesFiltered}
+          selectedTime={selectedTime}
+          onTimeChange={onTimeChange}
+          cargandoHorarios={cargandoHorarios}
+          fecha={fechaSeleccionada}
+        />
+      </div>
+      
+      <div className="flex justify-between pt-4">
+        <Button variant="outline" onClick={onBack}>
+          Atrás
+        </Button>
+        <Button 
+          onClick={onNext} 
+          disabled={!selectedTime || diasSeleccionablesMes.size === 0}
+          className="bg-green-500 hover:bg-green-600"
+        >
+          Continuar
+        </Button>
       </div>
     </div>
   );

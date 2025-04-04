@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 interface NoAvailabilityAlertProps {
   cargandoHorarios: boolean;
   onBack: () => void;
+  error?: string;
 }
 
-const NoAvailabilityAlert = ({ cargandoHorarios, onBack }: NoAvailabilityAlertProps) => {
+const NoAvailabilityAlert = ({ cargandoHorarios, onBack, error }: NoAvailabilityAlertProps) => {
   if (cargandoHorarios) {
     return (
       <div className="space-y-6">
@@ -37,7 +38,7 @@ const NoAvailabilityAlert = ({ cargandoHorarios, onBack }: NoAvailabilityAlertPr
       <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-800">
         <AlertCircle className="h-4 w-4 mr-2" />
         <AlertDescription>
-          No se pudo cargar la disponibilidad. Intenta más tarde.
+          {error || "No se pudo cargar la disponibilidad. Intenta más tarde."}
         </AlertDescription>
       </Alert>
       

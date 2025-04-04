@@ -34,6 +34,20 @@ const TimeSlotGrid = ({
     );
   }
 
+  if (!fecha) {
+    return (
+      <div className="border rounded-md p-6 bg-gray-50 h-72 flex flex-col items-center justify-center">
+        <AlertCircle className="h-8 w-8 text-amber-500 mb-2" />
+        <p className="text-gray-700 text-center font-medium">
+          Selecciona una fecha primero
+        </p>
+        <p className="text-sm text-gray-500 text-center mt-1">
+          Por favor selecciona una fecha del calendario para ver las horas disponibles
+        </p>
+      </div>
+    );
+  }
+
   if (horasDisponiblesFiltered.length === 0) {
     return (
       <div className="border rounded-md p-6 bg-gray-50 h-72 flex flex-col items-center justify-center">
