@@ -608,5 +608,3 @@ export const getCitaByTelefono = async (telefono: string) => {
   
   return { success: true, data: data || [] };
 };
-
-   
