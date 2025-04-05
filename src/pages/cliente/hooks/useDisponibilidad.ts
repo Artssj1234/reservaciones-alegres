@@ -131,13 +131,12 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
 
         if (result.success && result.data) {
           console.log('Horarios recibidos:', result.data);
-          const horariosDisp = Array.isArray(result.data) ? result.data : [];
-          setHorasDisponibles(horariosDisp);
+          setHorasDisponibles(result.data);
 
-          const horariosDisponibles = horariosDisp.filter(h => h.disponible);
-          console.log(`Se encontraron ${horariosDisponibles.length} horarios disponibles de ${horariosDisp.length} totales`);
+          const horariosDisponibles = result.data.filter(h => h.disponible);
+          console.log(`Se encontraron ${horariosDisponibles.length} horarios disponibles de ${result.data.length} totales`);
 
-          if (horariosDisponibles.length === 0 && horariosDisp.length > 0) {
+          if (horariosDisponibles.length === 0 && result.data.length > 0) {
             toast({
               title: "Información",
               description: "No hay horarios disponibles para la fecha seleccionada.",

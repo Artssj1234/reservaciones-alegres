@@ -26,6 +26,7 @@ export interface BusinessResponse {
   success: boolean;
   message?: string;
   business?: any;
+  disponible?: boolean; // Add disponible property to support verificarDisponibilidad
 }
 
 export interface BusinessStatsResponse {
@@ -481,9 +482,8 @@ export const getHorariosDisponibles = async (
   negocioId: string,
   fecha: string | Date,
   servicioId?: string
-): Promise<{ success: boolean; message?: string; data: HorarioDisponible[] | string[] }> => {
-  // Convertir fecha a formato string si es un objeto Date
-  const fechaStr = fecha instanceof Date ? fecha.toISOString().slice(0, 10) : fecha;
+): Promise<{ success: boolean; message?: string; data: HorarioDisponible[] }> => {
+  const fechaStr = fecha instanceof Date ? fecha.toISOString().split('T')[0] : fecha;
   
   console.log('Obteniendo horarios disponibles para negocio ID:', negocioId, 'en fecha:', fechaStr, 'para servicio ID:', servicioId || 'undefined');
 
@@ -545,7 +545,7 @@ export const getDiasDisponibles = async (
   anio: number, 
   mes: number, 
   servicioId?: string
-): Promise<{ success: boolean; message?: string; data: DiaDisponible[] | number[] }> => {
+): Promise<{ success: boolean; message?: string; data: DiaDisponible[] }> => {
   console.log('Obteniendo días disponibles para negocio ID:', negocioId, 'en año:', anio, 'mes:', mes, 'servicio ID:', servicioId || 'undefined');
   
   try {
@@ -591,40 +591,43 @@ export const getDiasDisponibles = async (
   }
 };
 
-export const verificarDisponibilidad = async (negocioId: string, fecha: string, horaInicio: string, horaFin: string) => {
-  console.log('Verificando disponibilidad para negocio ID:', negocioId, 'en fecha:', fecha, 'desde:', horaInicio, 'hasta:', horaFin);
+/**
+ * Checks availability for a specific time slot
+ * @param negocioId Business ID
+ * @param fecha Date in YYYY-MM-DD format
+ * @param horaInicio Start time
+ * @param horaFin End time
+ * @returns Promise with availability result
+ */
+export const verificarDisponibilidad = async (
+  negocioId: string, 
+  fecha: string, 
+  horaInicio: string, 
+  horaFin: string
+): Promise<{ success: boolean; message?: string; disponible: boolean }> => {
+  console.log('Verificando disponibilidad para negocio ID:', negocioId, 'fecha:', fecha, 'desde:', horaInicio, 'hasta:', horaFin);
   
-  const { data, error } = await supabase.rpc(
-    "verificar_disponibilidad" as any,
-    {
-      p_negocio_id: negocioId,
-      p_fecha: fecha,
-      p_hora_inicio: horaInicio,
-      p_hora_fin: horaFin
-    }
-  );
-  
-  console.log('Respuesta de disponibilidad:', { data, error });
-  
-  if (error) {
-    console.error('Error en verificar disponibilidad:', error);
-    return { success: false, message: error.message };
-  }
-  
-  if (data && typeof data === 'object') {
-    if (isBusinessResponse(data)) {
-      return data;
-    } else {
-      // Intenta convertir la respuesta genérica a BusinessResponse
-      const businessResponse = data as unknown as BusinessResponse;
-      if (businessResponse.success !== undefined) {
-        return businessResponse;
+  try {
+    const { data, error } = await supabase.rpc(
+      "verificar_disponibilidad",
+      {
+        p_negocio_id: negocioId,
+        p_fecha: fecha,
+        p_hora_inicio: horaInicio,
+        p_hora_fin: horaFin
       }
+    );
+    
+    if (error) {
+      console.error('Error al verificar disponibilidad:', error);
+      return { success: false, message: error.message, disponible: false };
     }
+    
+    return { success: true, disponible: data || false };
+  } catch (err) {
+    console.error('Error en verificarDisponibilidad:', err);
+    return { success: false, message: 'Error al procesar la solicitud', disponible: false };
   }
-  
-  console.error('Formato de respuesta inesperado:', data);
-  return { success: false, message: 'Error desconocido: formato de respuesta inválido' };
 };
 
 // Obtener información completa de un negocio por su slug (para clientes)
