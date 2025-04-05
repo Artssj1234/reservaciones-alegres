@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Calendar } from '@/components/ui/calendar';
-import { Info } from 'lucide-react';
+import { Info, CalendarX } from 'lucide-react';
 import { isAfter, isBefore, addMonths, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { format } from 'date-fns';
@@ -24,8 +24,7 @@ const DatePickerCalendar = ({
 
   const esDiaDisponible = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    const isAvailable = diasSeleccionablesMes.has(dateStr);
-    return isAvailable;
+    return diasSeleccionablesMes.has(dateStr);
   };
 
   const mostrarAvisoSinDisponibilidad = diasSeleccionablesMes.size === 0;
@@ -36,11 +35,16 @@ const DatePickerCalendar = ({
       
       {mostrarAvisoSinDisponibilidad ? (
         <div className="text-center p-6 bg-gray-50 rounded-lg">
-          <Info className="mx-auto h-6 w-6 text-blue-500 mb-3" />
-          <p className="text-gray-700 font-medium">No hay horarios disponibles</p>
-          <p className="text-sm text-gray-500 mt-1">
-            Por favor intenta más tarde o contacta con el negocio directamente.
+          <CalendarX className="mx-auto h-10 w-10 text-amber-500 mb-3" />
+          <p className="text-gray-700 font-medium">No hay fechas disponibles</p>
+          <p className="text-sm text-gray-500 mt-2">
+            No se encontraron fechas disponibles para este mes. Puedes:
           </p>
+          <ul className="text-sm text-gray-500 mt-2 list-disc list-inside space-y-1 text-left pl-4">
+            <li>Probar con otro mes</li>
+            <li>Seleccionar otro servicio</li>
+            <li>Contactar directamente con el negocio</li>
+          </ul>
         </div>
       ) : (
         <Calendar

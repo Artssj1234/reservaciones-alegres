@@ -1,7 +1,6 @@
 
 import React from 'react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2, CalendarX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface NoAvailabilityAlertProps {
@@ -13,42 +12,46 @@ interface NoAvailabilityAlertProps {
 const NoAvailabilityAlert = ({ cargandoHorarios, onBack, error }: NoAvailabilityAlertProps) => {
   if (cargandoHorarios) {
     return (
-      <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-center mb-4">Selecciona fecha y hora</h2>
-        <div className="flex justify-center items-center min-h-[300px]">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-primary" />
-            <p className="text-gray-600">Cargando disponibilidad...</p>
-          </div>
-        </div>
-        <div className="flex justify-between mt-6">
-          <Button variant="outline" onClick={onBack}>
-            Atrás
-          </Button>
-          <Button disabled className="bg-green-500 hover:bg-green-600">Siguiente</Button>
-        </div>
+      <div className="flex flex-col items-center justify-center p-12 space-y-4 text-center">
+        <Loader2 className="h-12 w-12 animate-spin text-gray-400" />
+        <h2 className="text-xl font-semibold">Cargando disponibilidad</h2>
+        <p className="text-gray-500 max-w-md">
+          Estamos consultando la disponibilidad del negocio. Por favor espera un momento...
+        </p>
       </div>
     );
   }
 
-  const errorMessage = error || "No se encontró disponibilidad. Por favor, selecciona otro servicio o contacta directamente con el negocio.";
-
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-center mb-4">Selecciona fecha y hora</h2>
+    <div className="flex flex-col items-center justify-center p-12 space-y-6 text-center">
+      {error ? (
+        <AlertCircle className="h-16 w-16 text-red-500" />
+      ) : (
+        <CalendarX className="h-16 w-16 text-amber-500" />
+      )}
       
-      <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-800">
-        <AlertCircle className="h-4 w-4 mr-2" />
-        <AlertDescription>
-          {errorMessage}
-        </AlertDescription>
-      </Alert>
+      <h2 className="text-2xl font-bold">
+        {error ? 'Ha ocurrido un error' : 'No hay disponibilidad'}
+      </h2>
       
-      <div className="flex justify-between mt-6">
-        <Button variant="outline" onClick={onBack}>
-          Atrás
+      <p className="text-gray-600 max-w-md">
+        {error || 'Este negocio no tiene horarios configurados o no hay disponibilidad en este momento.'}
+      </p>
+      
+      <div className="flex flex-col sm:flex-row gap-3 pt-4">
+        <Button 
+          variant="outline" 
+          onClick={onBack}
+          className="min-w-[120px]"
+        >
+          Volver atrás
         </Button>
-        <Button disabled className="bg-green-500 hover:bg-green-600">Siguiente</Button>
+        <Button 
+          className="bg-green-500 hover:bg-green-600 min-w-[120px]"
+          onClick={() => window.location.reload()}
+        >
+          Reintentar
+        </Button>
       </div>
     </div>
   );
