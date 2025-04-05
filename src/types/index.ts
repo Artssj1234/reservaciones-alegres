@@ -1,3 +1,4 @@
+
 export type Role = 'admin' | 'negocio';
 
 export interface Usuario {
@@ -28,6 +29,12 @@ export interface Negocio {
   nombre: string;
   slug: string;
   creado_en: string;
+  // Adding missing properties that are being used in CitaPublicaPage
+  telefono?: string;
+  correo?: string;
+  sitio_web?: string;
+  direccion?: string;
+  descripcion?: string;
 }
 
 export interface Servicio {
