@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AlertCircle, Loader2, CalendarX } from 'lucide-react';
+import { AlertCircle, Loader2, CalendarX, PhoneCall } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface NoAvailabilityAlertProps {
@@ -51,6 +51,13 @@ const NoAvailabilityAlert = ({ cargandoHorarios, onBack, error }: NoAvailability
           onClick={() => window.location.reload()}
         >
           Reintentar
+        </Button>
+        <Button 
+          variant="outline"
+          className="min-w-[120px] border-amber-500 text-amber-600 hover:bg-amber-50"
+        >
+          <PhoneCall className="h-4 w-4 mr-2" />
+          Contactar negocio
         </Button>
       </div>
     </div>
