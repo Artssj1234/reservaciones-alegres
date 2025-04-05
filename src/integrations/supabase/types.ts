@@ -469,6 +469,12 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      execute_sql: {
+        Args: {
+          query: string
+        }
+        Returns: Json
+      }
       get_business_by_user_id: {
         Args: {
           p_user_id: string
@@ -523,6 +529,17 @@ export type Database = {
           hora_fin: string
         }[]
       }
+      obtener_dias_disponibles: {
+        Args: {
+          p_negocio_id: string
+          p_servicio_id: string
+          p_anio: number
+          p_mes: number
+        }
+        Returns: {
+          dia: number
+        }[]
+      }
       obtener_dias_disponibles_mes: {
         Args: {
           p_negocio_id: string
@@ -563,6 +580,16 @@ export type Database = {
               disponible: boolean
             }[]
           }
+      obtener_horas_disponibles: {
+        Args: {
+          p_negocio_id: string
+          p_servicio_id: string
+          p_fecha: string
+        }
+        Returns: {
+          hora: string
+        }[]
+      }
       update_negocio_profile: {
         Args: {
           p_negocio_id: string

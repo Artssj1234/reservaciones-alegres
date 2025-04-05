@@ -470,13 +470,22 @@ export const updateUserPassword = async (id: string, nuevaContrasena: string) =>
   return { success: true, data };
 };
 
-// Fix 1: Update the function to use specific parameter types instead of Record<string, any>
+/**
+ * Obtiene los horarios disponibles para un negocio en una fecha específica
+ * @param negocioId ID del negocio
+ * @param fecha Fecha en formato YYYY-MM-DD o un objeto Date
+ * @param servicioId ID del servicio (opcional)
+ * @returns Un objeto con los horarios disponibles
+ */
 export const getHorariosDisponibles = async (
   negocioId: string,
-  fecha: string,
+  fecha: string | Date,
   servicioId?: string
-): Promise<{ success: boolean; message?: string; data: HorarioDisponible[] }> => {
-  console.log('Obteniendo horarios disponibles para negocio ID:', negocioId, 'en fecha:', fecha, 'para servicio ID:', servicioId || 'undefined');
+): Promise<{ success: boolean; message?: string; data: HorarioDisponible[] | string[] }> => {
+  // Convertir fecha a formato string si es un objeto Date
+  const fechaStr = fecha instanceof Date ? fecha.toISOString().slice(0, 10) : fecha;
+  
+  console.log('Obteniendo horarios disponibles para negocio ID:', negocioId, 'en fecha:', fechaStr, 'para servicio ID:', servicioId || 'undefined');
 
   try {
     // Define explicitly typed parameters
@@ -487,7 +496,7 @@ export const getHorariosDisponibles = async (
       p_servicio_id?: string;
     } = {
       p_negocio_id: negocioId,
-      p_fecha: fecha
+      p_fecha: fechaStr
     };
     
     // Si tenemos ID de servicio, agregarlo a los parámetros
@@ -523,13 +532,20 @@ export const getHorariosDisponibles = async (
   }
 };
 
-// Fix 2: Update the function to use specific parameter types instead of Record<string, any>
+/**
+ * Obtiene los días disponibles de un mes para un negocio
+ * @param negocioId ID del negocio
+ * @param anio Año
+ * @param mes Mes (1-12)
+ * @param servicioId ID del servicio (opcional)
+ * @returns Un objeto con los días disponibles
+ */
 export const getDiasDisponibles = async (
   negocioId: string, 
   anio: number, 
   mes: number, 
   servicioId?: string
-): Promise<{ success: boolean; message?: string; data: DiaDisponible[] }> => {
+): Promise<{ success: boolean; message?: string; data: DiaDisponible[] | number[] }> => {
   console.log('Obteniendo días disponibles para negocio ID:', negocioId, 'en año:', anio, 'mes:', mes, 'servicio ID:', servicioId || 'undefined');
   
   try {
@@ -557,34 +573,83 @@ export const getDiasDisponibles = async (
       params
     ) as { data: DiaDisponible[] | null, error: any };
     
-       if (error) {
+    if (error) {
       console.error('Error al obtener días disponibles:', error);
       return { success: false, message: error.message, data: [] };
     }
+    
+    // Asegurarnos de que los datos sean del tipo correcto
+    const dias: DiaDisponible[] = Array.isArray(data) ? data : [];
+    
+    console.log(`Días disponibles recibidos: ${dias.length}`);
+    console.log('Con disponibilidad:', dias.filter(d => d.tiene_disponibilidad).length);
+    
+    return { success: true, data: dias };
+  } catch (err) {
+    console.error('Error en getDiasDisponibles:', err);
+    return { success: false, message: 'Error al procesar la solicitud', data: [] };
+  }
+};
 
-    return { success: true, data };
-  }; // 👈 esta llave y punto y coma CIERRAN la función correctamente
-
-// Obtener información completa de un negocio por su slug (para clientes)
-export const getNegocioBySlug = async (slug: string) => {
-
-  console.log('Obteniendo negocio por slug:', slug);
+export const verificarDisponibilidad = async (negocioId: string, fecha: string, horaInicio: string, horaFin: string) => {
+  console.log('Verificando disponibilidad para negocio ID:', negocioId, 'en fecha:', fecha, 'desde:', horaInicio, 'hasta:', horaFin);
   
-  const { data, error } = await supabase
-    .from('negocios')
-    .select('*')
-    .eq('slug', slug)
-    .single();
+  const { data, error } = await supabase.rpc(
+    "verificar_disponibilidad" as any,
+    {
+      p_negocio_id: negocioId,
+      p_fecha: fecha,
+      p_hora_inicio: horaInicio,
+      p_hora_fin: horaFin
+    }
+  );
+  
+  console.log('Respuesta de disponibilidad:', { data, error });
   
   if (error) {
-    console.error('Error al obtener negocio por slug:', error);
+    console.error('Error en verificar disponibilidad:', error);
     return { success: false, message: error.message };
   }
   
+  if (data && typeof data === 'object') {
+    if (isBusinessResponse(data)) {
+      return data;
+    } else {
+      // Intenta convertir la respuesta genérica a BusinessResponse
+      const businessResponse = data as unknown as BusinessResponse;
+      if (businessResponse.success !== undefined) {
+        return businessResponse;
+      }
+    }
+  }
+  
+  console.error('Formato de respuesta inesperado:', data);
+  return { success: false, message: 'Error desconocido: formato de respuesta inválido' };
+};
+
+// Obtener información completa de un negocio por su slug (para clientes)
+export const getNegocioBySlug = async (slug: string) => {
+  console.log('Obteniendo negocio por slug:', slug);
+  const { data, error } = await supabase
+    .from("negocios")
+    .select(
+      `
+      *,
+      servicios:servicios(*)
+    `
+    )
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Error al obtener negocio:", error.message);
+    return { success: false, message: error.message };
+  }
+
   if (!data) {
     return { success: false, message: 'Negocio no encontrado' };
   }
-  
+
   return { success: true, data };
 };
 
@@ -610,27 +675,3 @@ export const getCitaByTelefono = async (telefono: string) => {
   
   return { success: true, data: data || [] };
 };
-
-
-// Obtener información completa de un negocio por su slug (para clientes)
-export const getNegocioBySlug = async (slug: string) => {
-  console.log('Obteniendo negocio por slug:', slug);
-  const { data, error } = await supabase
-    .from("negocios")
-    .select(
-      `
-      *,
-      servicios:servicios(*)
-    `
-    )
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Error al obtener negocio:", error.message);
-    return null;
-  }
-
-  return data;
-};
-
