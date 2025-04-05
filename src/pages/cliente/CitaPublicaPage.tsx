@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useNegocio } from './hooks/useNegocio';
@@ -17,10 +17,13 @@ import LoadingIndicator from './components/LoadingIndicator';
 import StepsContainer from './components/StepsContainer';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { PhoneCall, Globe } from 'lucide-react';
 
 const CitaPublicaPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const { negocio, servicios, isLoading: isLoadingNegocio, error: negocioError } = useNegocio(slug);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
 
   const { 
     formData, 
@@ -66,6 +69,10 @@ const CitaPublicaPage = () => {
       });
     }
   }, [negocio, servicios, step, formData, horasDisponibles, diasSeleccionablesMes]);
+
+  const handleContactClick = () => {
+    setContactDialogOpen(true);
+  };
 
   if (isLoadingNegocio && !negocio) {
     return <LoadingIndicator message="Cargando información del negocio..." />;
@@ -128,6 +135,7 @@ const CitaPublicaPage = () => {
             onMonthChange={handleMonthChange}
             onNext={handleNext}
             onBack={handleBack}
+            onContactClick={handleContactClick}
           />
         )}
 
@@ -150,6 +158,64 @@ const CitaPublicaPage = () => {
         citasEncontradas={citasEncontradas}
         onVerificar={handleVerificarCita}
       />
+
+      <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Contactar con {negocio.nombre}</DialogTitle>
+            <DialogDescription>
+              Si necesitas contactar directamente con el negocio, puedes utilizar los siguientes datos:
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {negocio.telefono && (
+              <div className="flex items-center gap-2">
+                <PhoneCall className="h-4 w-4 text-green-600" />
+                <span className="font-medium">Teléfono:</span>
+                <a href={`tel:${negocio.telefono}`} className="text-blue-600 hover:underline">{negocio.telefono}</a>
+              </div>
+            )}
+            
+            {negocio.correo && (
+              <div className="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span className="font-medium">Email:</span>
+                <a href={`mailto:${negocio.correo}`} className="text-blue-600 hover:underline">{negocio.correo}</a>
+              </div>
+            )}
+            
+            {negocio.sitio_web && (
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-blue-600" />
+                <span className="font-medium">Sitio web:</span>
+                <a href={negocio.sitio_web} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{negocio.sitio_web}</a>
+              </div>
+            )}
+            
+            {negocio.direccion && (
+              <div className="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span className="font-medium">Dirección:</span>
+                <span>{negocio.direccion}</span>
+              </div>
+            )}
+            
+            {!negocio.telefono && !negocio.correo && !negocio.sitio_web && !negocio.direccion && (
+              <p className="text-amber-600">
+                Este negocio no ha proporcionado información de contacto.
+              </p>
+            )}
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => setContactDialogOpen(false)}>Cerrar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

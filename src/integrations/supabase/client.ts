@@ -488,7 +488,7 @@ export const getHorariosDisponibles = async (
   console.log('Obteniendo horarios disponibles para negocio ID:', negocioId, 'en fecha:', fechaStr, 'para servicio ID:', servicioId || 'undefined');
 
   try {
-    // Define explicitly typed parameters
+    // Define explicitly typed parameters object
     const params: {
       p_negocio_id: string;
       p_fecha: string;
@@ -513,7 +513,7 @@ export const getHorariosDisponibles = async (
     const { data, error } = await supabase.rpc(
       "obtener_horarios_disponibles",
       params
-    ) as { data: HorarioDisponible[] | null; error: any };
+    );
 
     if (error) {
       console.error('Error al obtener horarios disponibles:', error);

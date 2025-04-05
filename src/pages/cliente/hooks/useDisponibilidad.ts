@@ -123,6 +123,15 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         const servicioIdParaEnviar = servicioId && servicioId.trim() !== '' ? servicioId : undefined;
 
         console.log(`Obteniendo horarios para negocio: ${negocioId}, fecha: ${fechaFormateada}, servicio: ${servicioIdParaEnviar || 'no especificado'}`);
+        
+        // Agregar console.log para verificar los parámetros exactos que enviamos a la RPC
+        const parametrosRPC = {
+          negocioId,
+          fechaFormateada,
+          servicioId: servicioIdParaEnviar
+        };
+        console.log('Llamando RPC con:', parametrosRPC);
+        
         const result = await getHorariosDisponibles(
           negocioId,
           fechaFormateada,

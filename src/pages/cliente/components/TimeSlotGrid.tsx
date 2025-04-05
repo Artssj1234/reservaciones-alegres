@@ -10,6 +10,7 @@ interface TimeSlotGridProps {
   onTimeChange: (hora: string) => void;
   cargandoHorarios: boolean;
   fecha: Date | undefined;
+  onContactClick?: () => void;
 }
 
 const TimeSlotGrid = ({
@@ -17,7 +18,8 @@ const TimeSlotGrid = ({
   selectedTime,
   onTimeChange,
   cargandoHorarios,
-  fecha
+  fecha,
+  onContactClick
 }: TimeSlotGridProps) => {
   const formatDate = (date: Date) => {
     const day = date.getDate();
@@ -63,6 +65,7 @@ const TimeSlotGrid = ({
           variant="outline" 
           size="sm" 
           className="gap-2 text-sm border-gray-300 hover:bg-gray-100 hover:text-gray-700"
+          onClick={onContactClick}
         >
           <PhoneCall className="h-4 w-4" />
           Contactar al negocio
@@ -86,9 +89,18 @@ const TimeSlotGrid = ({
           <p className="text-gray-700 font-medium mb-1">
             No hay horas disponibles en esta fecha
           </p>
-          <p className="text-sm text-gray-500 text-center max-w-md">
+          <p className="text-sm text-gray-500 text-center max-w-md mb-4">
             Por favor selecciona otra fecha o contacta con el negocio.
           </p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-2 text-sm border-amber-300 hover:bg-amber-50 text-amber-600"
+            onClick={onContactClick}
+          >
+            <PhoneCall className="h-4 w-4" />
+            Contactar al negocio
+          </Button>
         </div>
       ) : (
         <>

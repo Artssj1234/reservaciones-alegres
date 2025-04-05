@@ -7,9 +7,10 @@ interface NoAvailabilityAlertProps {
   cargandoHorarios: boolean;
   onBack: () => void;
   error?: string;
+  onContactClick?: () => void;
 }
 
-const NoAvailabilityAlert = ({ cargandoHorarios, onBack, error }: NoAvailabilityAlertProps) => {
+const NoAvailabilityAlert = ({ cargandoHorarios, onBack, error, onContactClick }: NoAvailabilityAlertProps) => {
   if (cargandoHorarios) {
     return (
       <div className="flex flex-col items-center justify-center p-12 space-y-4 text-center">
@@ -35,7 +36,7 @@ const NoAvailabilityAlert = ({ cargandoHorarios, onBack, error }: NoAvailability
       </h2>
       
       <p className="text-gray-600 max-w-md">
-        {error || 'Este negocio no tiene horarios configurados o no hay disponibilidad en este momento.'}
+        {error || 'Este negocio no tiene horarios configurados o no hay disponibilidad en este momento. Por favor, intenta seleccionar otra fecha o contacta directamente con el negocio.'}
       </p>
       
       <div className="flex flex-col sm:flex-row gap-3 pt-4">
@@ -55,6 +56,7 @@ const NoAvailabilityAlert = ({ cargandoHorarios, onBack, error }: NoAvailability
         <Button 
           variant="outline"
           className="min-w-[120px] border-amber-500 text-amber-600 hover:bg-amber-50"
+          onClick={onContactClick}
         >
           <PhoneCall className="h-4 w-4 mr-2" />
           Contactar negocio

@@ -20,6 +20,7 @@ interface DateTimePickerProps {
   onMonthChange: (date: Date) => void;
   onNext: () => void;
   onBack: () => void;
+  onContactClick?: () => void;
 }
 
 const DateTimePicker = ({
@@ -34,7 +35,8 @@ const DateTimePicker = ({
   onTimeChange,
   onMonthChange,
   onNext,
-  onBack
+  onBack,
+  onContactClick
 }: DateTimePickerProps) => {
   const { toast } = useToast();
   const [fechaSeleccionada, setFechaSeleccionada] = useState<Date | undefined>(date);
@@ -76,7 +78,12 @@ const DateTimePicker = ({
 
   // Show error message if no available days and not in loading state
   if ((diasSeleccionablesMes.size === 0 && !cargandoHorarios) || error) {
-    return <NoAvailabilityAlert cargandoHorarios={false} onBack={onBack} error={error} />;
+    return <NoAvailabilityAlert 
+      cargandoHorarios={false} 
+      onBack={onBack} 
+      error={error} 
+      onContactClick={onContactClick} 
+    />;
   }
 
   if (cargandoHorarios && horasDisponibles.length === 0) {
@@ -109,6 +116,7 @@ const DateTimePicker = ({
           onTimeChange={onTimeChange}
           cargandoHorarios={cargandoHorarios}
           fecha={fechaSeleccionada}
+          onContactClick={onContactClick}
         />
       </div>
       
