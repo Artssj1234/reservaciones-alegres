@@ -1,4 +1,3 @@
-
 import { supabase } from './base-client';
 import { DiaDisponible, HorarioDisponible } from '@/types';
 
@@ -19,7 +18,6 @@ export const getHorariosDisponibles = async (
   console.log('Obteniendo horarios disponibles para negocio ID:', negocioId, 'en fecha:', fechaStr, 'para servicio ID:', servicioId || 'undefined');
 
   try {
-    // Define explicitly typed parameters object
     const params: {
       p_negocio_id: string;
       p_fecha: string;
@@ -30,21 +28,18 @@ export const getHorariosDisponibles = async (
       p_fecha: fechaStr
     };
     
-    // SOLUCIÓN AL PROBLEMA: Enviar solo p_servicio_id o p_duracion_minutos, nunca ambos
+    // ✅ Corregido: solo enviar uno de los dos parámetros
     if (servicioId && servicioId.trim() !== '') {
       params.p_servicio_id = servicioId;
-      // NO incluir p_duracion_minutos cuando hay p_servicio_id
+      delete params.p_duracion_minutos;
     } else {
-      // Solo incluir duración predeterminada cuando no hay servicio
       params.p_duracion_minutos = 30;
+      delete params.p_servicio_id;
     }
     
     console.log('Parámetros para obtener_horarios_disponibles:', params);
     
-    const { data, error } = await supabase.rpc(
-      "obtener_horarios_disponibles",
-      params
-    );
+    const { data, error } = await supabase.rpc("obtener_horarios_disponibles", params);
 
     if (error) {
       console.error('Error al obtener horarios disponibles:', error);
@@ -81,7 +76,6 @@ export const getDiasDisponibles = async (
   console.log('Obteniendo días disponibles para negocio ID:', negocioId, 'en año:', anio, 'mes:', mes, 'servicio ID:', servicioId || 'undefined');
   
   try {
-    // Define explicitly typed parameters
     const params: {
       p_negocio_id: string;
       p_anio: number;
@@ -93,7 +87,6 @@ export const getDiasDisponibles = async (
       p_mes: mes
     };
     
-    // Solo agregar el servicio_id si está definido
     if (servicioId && servicioId.trim() !== '') {
       params.p_servicio_id = servicioId;
     }
@@ -110,7 +103,6 @@ export const getDiasDisponibles = async (
       return { success: false, message: error.message, data: [] };
     }
     
-    // Asegurarnos de que los datos sean del tipo correcto
     const dias: DiaDisponible[] = Array.isArray(data) ? data : [];
     
     console.log(`Días disponibles recibidos: ${dias.length}`);
