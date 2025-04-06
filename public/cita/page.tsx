@@ -22,6 +22,7 @@ export default function ReservaFlujoCliente({ negocioId }: { negocioId: string }
   const [horaSeleccionada, setHoraSeleccionada] = useState('');
   const [cliente, setCliente] = useState({ nombre: '', telefono: '' });
   const [confirmacion, setConfirmacion] = useState<null | { fecha: string; hora: string }>(null);
+  const [diasDisponibles, setDiasDisponibles] = useState<Date[]>([]);
   const [cargando, setCargando] = useState(false);
   const { toast } = useToast();
 
@@ -43,6 +44,27 @@ export default function ReservaFlujoCliente({ negocioId }: { negocioId: string }
   }, [negocioId]);
 
   useEffect(() => {
+    const cargarDiasDisponibles = async () => {
+      if (!servicioSeleccionado || !fechaSeleccionada) return;
+
+      const anio = fechaSeleccionada.getFullYear();
+      const mes = fechaSeleccionada.getMonth() + 1;
+
+      const { data, error } = await supabase.rpc('get_dias_con_disponibilidad', {
+        p_negocio_id: negocioId,
+        p_servicio_id: servicioSeleccionado.id,
+        p_anio: anio,
+        p_mes: mes
+      });
+
+      if (!error && data) {
+        const dias = data.map((d: { fecha: string }) => new Date(d.fecha));
+        setDiasDisponibles(dias);
+      }
+    };
+
+    cargarDiasDisponibles();
+
     const obtenerBloques = async () => {
       if (!servicioSeleccionado || !fechaSeleccionada) return;
 
@@ -151,6 +173,13 @@ export default function ReservaFlujoCliente({ negocioId }: { negocioId: string }
               selected={fechaSeleccionada}
               onSelect={setFechaSeleccionada}
               locale={es}
+              disabled={(date) =>
+                !diasDisponibles.some(
+                  (d) => d.getFullYear() === date.getFullYear() &&
+                         d.getMonth() === date.getMonth() &&
+                         d.getDate() === date.getDate()
+                )
+              }
             />
           </PopoverContent>
         </Popover>
