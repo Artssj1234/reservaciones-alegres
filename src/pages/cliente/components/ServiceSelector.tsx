@@ -1,81 +1,110 @@
 
 import React from 'react';
+import { Check, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { formatCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Clock, DollarSign } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ServiceSelectorProps {
-  servicios: any[];
+  servicios: Array<{
+    id: string;
+    nombre: string;
+    descripcion?: string;
+    precio?: number;
+    duracion_minutos: number;
+  }>;
   selectedServiceId: string;
-  onServiceChange: (servicioId: string) => void;
+  onServiceChange: (id: string) => void;
   onNext?: () => void;
 }
 
-const ServiceSelector = ({ servicios, selectedServiceId, onServiceChange, onNext }: ServiceSelectorProps) => {
+const ServiceSelector = ({ 
+  servicios, 
+  selectedServiceId, 
+  onServiceChange, 
+  onNext 
+}: ServiceSelectorProps) => {
+  
   if (servicios.length === 0) {
     return (
-      <div className="py-8 text-center">
-        <h2 className="text-xl font-medium mb-4">No hay servicios disponibles</h2>
-        <p className="text-gray-500">
-          Este negocio no tiene servicios configurados actualmente.
-        </p>
+      <div className="space-y-4">
+        <Alert className="bg-amber-50 border-amber-200 text-amber-800">
+          <AlertDescription>
+            Este negocio no tiene servicios configurados. Por favor, intenta más tarde o contacta directamente con el negocio.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto p-4">
-      <div>
-        <h1 className="text-2xl font-bold text-center">Selecciona un servicio</h1>
-        <p className="text-center text-gray-600">Elige el servicio para el cual deseas reservar una cita</p>
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <h2 className="text-2xl font-bold text-center">Selecciona un servicio</h2>
+        <p className="text-center text-gray-500">
+          Escoge el servicio para el que deseas agendar una cita.
+        </p>
       </div>
       
-      <div className="space-y-3">
-        {servicios.map(servicio => (
-          <Card 
-            key={servicio.id} 
-            className={`transition-all hover:shadow-md cursor-pointer ${
-              selectedServiceId === servicio.id ? 'border-green-500 border-2 bg-green-50' : ''
-            }`}
+      <div className="space-y-3 mt-6">
+        {servicios.map((servicio) => (
+          <div
+            key={servicio.id}
             onClick={() => onServiceChange(servicio.id)}
+            className={`
+              cursor-pointer border rounded-lg p-4 transition-colors 
+              ${selectedServiceId === servicio.id 
+                ? 'border-green-500 bg-green-50 shadow-sm' 
+                : 'hover:border-gray-300 hover:bg-gray-50'
+              }
+            `}
           >
-            <CardContent className="p-4">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
-                <div className="mb-2 md:mb-0">
-                  <h3 className="font-medium text-lg">{servicio.nombre}</h3>
-                  {servicio.descripcion && (
-                    <p className="text-gray-600 text-sm mt-1">{servicio.descripcion}</p>
-                  )}
-                </div>
-                
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="flex items-center gap-1 bg-gray-50">
-                    <Clock className="h-3 w-3" />
-                    {servicio.duracion_minutos} min
-                  </Badge>
-                  
-                  {servicio.precio && (
-                    <Badge variant="outline" className="flex items-center gap-1 bg-gray-50">
-                      <DollarSign className="h-3 w-3" />
-                      {servicio.precio}
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center">
+                  <h3 className="font-medium">{servicio.nombre}</h3>
+                  {servicio.duracion_minutos > 0 && (
+                    <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-100">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {servicio.duracion_minutos} min
                     </Badge>
                   )}
                 </div>
+                
+                {servicio.descripcion && (
+                  <p className="text-sm text-gray-500 mt-1">{servicio.descripcion}</p>
+                )}
+                
+                {servicio.precio && servicio.precio > 0 && (
+                  <p className="text-sm font-semibold mt-1 text-gray-700">
+                    {formatCurrency(servicio.precio)}
+                  </p>
+                )}
               </div>
-            </CardContent>
-          </Card>
+              
+              <div className={`h-5 w-5 flex-shrink-0 rounded-full border ${
+                selectedServiceId === servicio.id 
+                  ? 'bg-green-500 border-green-500 text-white' 
+                  : 'border-gray-300'
+              }`}>
+                {selectedServiceId === servicio.id && (
+                  <Check className="h-5 w-5" />
+                )}
+              </div>
+            </div>
+          </div>
         ))}
       </div>
       
-      <div className="flex justify-between pt-4">
-        <div></div> {/* Empty div to maintain space */}
+      <div className="mt-4 flex justify-end">
         <Button 
           onClick={onNext} 
-          disabled={!selectedServiceId || !onNext} 
-          className="bg-green-500 hover:bg-green-600"
+          disabled={!selectedServiceId || !onNext}
+          className="bg-green-500 hover:bg-green-600 gap-2"
         >
-          Continuar
+          Siguiente
+          <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
     </div>

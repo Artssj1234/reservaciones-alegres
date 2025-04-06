@@ -1,243 +1,199 @@
 
 import { supabase } from './base-client';
 import { DiaDisponible, HorarioDisponible } from '@/types';
-import { Json } from './types';
+import { format } from 'date-fns';
 
-// Interface for the response from crear_cita_segura RPC function
-interface CrearCitaSeguraResponse {
-  success: boolean;
-  message?: string;
-  cita_id?: string;
-}
-
-/**
- * Obtiene los horarios disponibles para un negocio en una fecha específica
- * @param negocioId ID del negocio
- * @param fecha Fecha en formato YYYY-MM-DD o un objeto Date
- * @param servicioId ID del servicio (obligatorio)
- * @returns Un objeto con los horarios disponibles
- */
 export const getHorariosDisponibles = async (
-  negocioId: string,
-  fecha: string | Date,
+  negocioId: string, 
+  fecha: string,
   servicioId: string
-): Promise<{ success: boolean; message?: string; data: HorarioDisponible[] }> => {
-  const fechaStr = fecha instanceof Date ? fecha.toISOString().split('T')[0] : fecha;
-  
-  console.log('Obteniendo horarios disponibles para negocio ID:', negocioId, 'en fecha:', fechaStr, 'para servicio ID:', servicioId || 'undefined');
+): Promise<{ success: boolean; message?: string; data?: HorarioDisponible[] }> => {
+  if (!negocioId || !fecha) {
+    console.error('Error: Se requiere negocioId y fecha');
+    return { success: false, message: 'Se requiere negocioId y fecha' };
+  }
 
-  // Validar que haya un ID de servicio válido
   if (!servicioId || servicioId.trim() === '') {
-    console.error('Error: No se proporcionó un ID de servicio válido');
-    return { 
-      success: false, 
-      message: 'Por favor, selecciona un servicio antes de consultar la disponibilidad.', 
-      data: [] 
-    };
+    console.error('Error: Se requiere un servicio seleccionado');
+    return { success: false, message: 'Selecciona un servicio para ver los horarios disponibles' };
   }
 
   try {
-    // Preparar parámetros para la función RPC
-    const params = {
-      p_negocio_id: negocioId,
-      p_fecha: fechaStr,
-      p_servicio_id: servicioId
-    };
+    console.log(`Consultando horarios para negocio=${negocioId}, fecha=${fecha}, servicio=${servicioId}`);
     
-    console.log('Parámetros para obtener_horarios_disponibles:', params);
-    
-    const { data, error } = await supabase.rpc("obtener_horarios_disponibles", params);
+    const { data, error } = await supabase
+      .rpc('obtener_horarios_disponibles', {
+        p_negocio_id: negocioId,
+        p_fecha: fecha,
+        p_servicio_id: servicioId
+      });
 
     if (error) {
       console.error('Error al obtener horarios disponibles:', error);
-      return { success: false, message: error.message, data: [] };
+      return { success: false, message: error.message };
     }
 
-    const horarios: HorarioDisponible[] = Array.isArray(data) ? data : [];
+    console.log(`Se encontraron ${data?.length || 0} horarios para la fecha ${fecha}`);
+    console.log('Detalle de horarios:', data);
     
-    console.log(`Horarios disponibles recibidos: ${horarios.length} slots`);
-    console.log('Disponibles:', horarios.filter(h => h.disponible).length);
-    console.log('No disponibles:', horarios.filter(h => !h.disponible).length);
-
-    return { success: true, data: horarios };
-  } catch (err) {
-    console.error('Error en getHorariosDisponibles:', err);
-    return { success: false, message: 'Error al procesar la solicitud', data: [] };
+    return {
+      success: true,
+      data: data || []
+    };
+  } catch (error) {
+    console.error('Error en getHorariosDisponibles:', error);
+    return { 
+      success: false, 
+      message: 'Error al obtener los horarios disponibles' 
+    };
   }
 };
 
-/**
- * Obtiene los días disponibles de un mes para un negocio
- * @param negocioId ID del negocio
- * @param anio Año
- * @param mes Mes (1-12)
- * @param servicioId ID del servicio (obligatorio)
- * @returns Un objeto con los días disponibles
- */
 export const getDiasDisponibles = async (
   negocioId: string, 
   anio: number, 
-  mes: number, 
+  mes: number,
   servicioId: string
-): Promise<{ success: boolean; message?: string; data: DiaDisponible[] }> => {
-  console.log('Obteniendo días disponibles para negocio ID:', negocioId, 'en año:', anio, 'mes:', mes, 'servicio ID:', servicioId || 'undefined');
-  
-  // Validar que haya un ID de servicio válido
-  if (!servicioId || servicioId.trim() === '') {
-    console.error('Error: No se proporcionó un ID de servicio válido');
-    return { 
-      success: false, 
-      message: 'Por favor, selecciona un servicio antes de consultar la disponibilidad.', 
-      data: [] 
-    };
+): Promise<{ success: boolean; message?: string; data?: DiaDisponible[] }> => {
+  if (!negocioId) {
+    console.error('Error: Se requiere negocioId');
+    return { success: false, message: 'Se requiere negocioId' };
   }
-  
+
+  if (!servicioId || servicioId.trim() === '') {
+    console.error('Error: Se requiere un servicio seleccionado');
+    return { success: false, message: 'Selecciona un servicio para ver la disponibilidad' };
+  }
+
   try {
-    const params = {
-      p_negocio_id: negocioId,
-      p_anio: anio,
-      p_mes: mes,
-      p_servicio_id: servicioId
-    };
+    console.log(`Consultando dias disponibles para negocio=${negocioId}, año=${anio}, mes=${mes}, servicio=${servicioId}`);
     
-    console.log('Parámetros para obtener_dias_disponibles_mes:', params);
-    
-    const { data, error } = await supabase.rpc(
-      "obtener_dias_disponibles_mes",
-      params
-    ) as { data: DiaDisponible[] | null, error: any };
-    
+    const { data, error } = await supabase
+      .rpc('obtener_dias_disponibles_mes', {
+        p_negocio_id: negocioId,
+        p_anio: anio,
+        p_mes: mes,
+        p_servicio_id: servicioId
+      });
+
     if (error) {
       console.error('Error al obtener días disponibles:', error);
-      return { success: false, message: error.message, data: [] };
+      return { success: false, message: error.message };
     }
+
+    // Formatear fechas para el frontend
+    const diasFormateados = data?.map(dia => ({
+      ...dia,
+      fecha: typeof dia.fecha === 'string' ? dia.fecha : format(new Date(dia.fecha), 'yyyy-MM-dd')
+    })) || [];
+
+    console.log(`Se encontraron ${diasFormateados.length} días para el mes ${mes}/${anio}`);
     
-    const dias: DiaDisponible[] = Array.isArray(data) ? data : [];
-    
-    console.log(`Días disponibles recibidos: ${dias.length}`);
-    console.log('Con disponibilidad:', dias.filter(d => d.tiene_disponibilidad).length);
-    
-    return { success: true, data: dias };
-  } catch (err) {
-    console.error('Error en getDiasDisponibles:', err);
-    return { success: false, message: 'Error al procesar la solicitud', data: [] };
+    return {
+      success: true,
+      data: diasFormateados
+    };
+  } catch (error) {
+    console.error('Error en getDiasDisponibles:', error);
+    return { 
+      success: false, 
+      message: 'Error al obtener los días disponibles' 
+    };
   }
 };
 
-/**
- * Checks availability for a specific time slot
- * @param negocioId Business ID
- * @param fecha Date in YYYY-MM-DD format
- * @param horaInicio Start time
- * @param horaFin End time
- * @returns Promise with availability result
- */
 export const verificarDisponibilidad = async (
-  negocioId: string, 
-  fecha: string, 
-  horaInicio: string, 
+  negocioId: string,
+  fecha: string,
+  horaInicio: string,
   horaFin: string
-): Promise<{ success: boolean; message?: string; disponible: boolean }> => {
-  console.log('Verificando disponibilidad para negocio ID:', negocioId, 'fecha:', fecha, 'desde:', horaInicio, 'hasta:', horaFin);
-  
+): Promise<{ success: boolean; message?: string; disponible?: boolean }> => {
+  if (!negocioId || !fecha || !horaInicio || !horaFin) {
+    return { success: false, message: 'Faltan datos requeridos' };
+  }
+
   try {
-    const { data, error } = await supabase.rpc(
-      "verificar_disponibilidad",
-      {
+    const { data, error } = await supabase
+      .rpc('verificar_disponibilidad', {
         p_negocio_id: negocioId,
         p_fecha: fecha,
         p_hora_inicio: horaInicio,
         p_hora_fin: horaFin
-      }
-    );
-    
+      });
+
     if (error) {
       console.error('Error al verificar disponibilidad:', error);
-      return { success: false, message: error.message, disponible: false };
+      return { success: false, message: error.message };
     }
-    
-    return { success: true, disponible: !!data };
-  } catch (err) {
-    console.error('Error en verificarDisponibilidad:', err);
-    return { success: false, message: 'Error al procesar la solicitud', disponible: false };
-  }
-};
 
-/**
- * Creates a new appointment with double-checking availability
- * @param citaData Appointment data
- * @returns Result of creating the appointment
- */
-export const crearCitaSegura = async (citaData: {
-  negocio_id: string;
-  nombre_cliente: string;
-  telefono_cliente: string;
-  servicio_id: string;
-  fecha: string;
-  hora_inicio: string;
-  hora_fin: string;
-}): Promise<{ success: boolean; message?: string; cita_id?: string }> => {
-  console.log('Creando cita segura:', citaData);
-  
-  // Validate required fields
-  if (!citaData.servicio_id || citaData.servicio_id.trim() === '') {
+    return {
+      success: true,
+      disponible: data
+    };
+  } catch (error) {
+    console.error('Error en verificarDisponibilidad:', error);
     return { 
       success: false, 
-      message: 'El servicio es obligatorio para crear una cita' 
+      message: 'Error al verificar la disponibilidad' 
     };
-  }
-  
-  try {
-    // We need to use a more generic approach since TypeScript doesn't recognize this RPC function
-    const { data, error } = await supabase.rpc(
-      "crear_cita_segura" as any,
-      {
-        p_negocio_id: citaData.negocio_id,
-        p_cliente_nombre: citaData.nombre_cliente,
-        p_cliente_telefono: citaData.telefono_cliente,
-        p_servicio_id: citaData.servicio_id,
-        p_fecha: citaData.fecha,
-        p_hora_inicio: citaData.hora_inicio,
-        p_hora_fin: citaData.hora_fin
-      }
-    ) as { data: CrearCitaSeguraResponse | null, error: any };
-    
-    if (error) {
-      console.error('Error al crear cita segura:', error);
-      return { success: false, message: error.message || 'Error al crear la cita' };
-    }
-    
-    if (data && data.success) {
-      return { 
-        success: true, 
-        message: data.message || 'Cita creada correctamente',
-        cita_id: data.cita_id
-      };
-    } else if (data) {
-      return { 
-        success: false, 
-        message: data.message || 'No se pudo crear la cita' 
-      };
-    } else {
-      return {
-        success: false,
-        message: 'No se recibió respuesta del servidor'
-      };
-    }
-  } catch (err) {
-    console.error('Error en crearCitaSegura:', err);
-    return { success: false, message: 'Error al procesar la solicitud' };
   }
 };
 
-/**
- * Get appointments by phone number
- * @param telefono Phone number to search for
- * @returns List of appointments
- */
+export const crearCitaSegura = async (
+  negocioId: string,
+  clienteNombre: string,
+  clienteTelefono: string,
+  servicioId: string,
+  fecha: string,
+  horaInicio: string,
+  horaFin: string
+): Promise<{ success: boolean; message?: string; citaId?: string }> => {
+  if (!negocioId || !clienteNombre || !clienteTelefono || !servicioId || !fecha || !horaInicio || !horaFin) {
+    return { success: false, message: 'Faltan datos requeridos para crear la cita' };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .rpc('crear_cita_segura', {
+        p_negocio_id: negocioId,
+        p_cliente_nombre: clienteNombre,
+        p_cliente_telefono: clienteTelefono,
+        p_servicio_id: servicioId,
+        p_fecha: fecha,
+        p_hora_inicio: horaInicio,
+        p_hora_fin: horaFin
+      });
+
+    if (error) {
+      console.error('Error al crear cita:', error);
+      return { success: false, message: error.message };
+    }
+
+    if (!data.success) {
+      return { success: false, message: data.message };
+    }
+
+    return {
+      success: true,
+      message: data.message,
+      citaId: data.cita_id
+    };
+  } catch (error) {
+    console.error('Error en crearCitaSegura:', error);
+    return { 
+      success: false, 
+      message: 'Error al crear la cita' 
+    };
+  }
+};
+
 export const buscarCitasPorTelefono = async (
   telefono: string
-): Promise<{ success: boolean; message?: string; data?: any[] }> => {
+): Promise<{ success: boolean; message?: string; citas?: any[] }> => {
+  if (!telefono) {
+    return { success: false, message: 'Teléfono requerido' };
+  }
+
   try {
     const { data, error } = await supabase
       .from('citas')
@@ -248,7 +204,6 @@ export const buscarCitasPorTelefono = async (
         hora_fin,
         estado,
         nombre_cliente,
-        telefono_cliente,
         servicios (
           id,
           nombre,
@@ -257,20 +212,27 @@ export const buscarCitasPorTelefono = async (
         negocios (
           id,
           nombre,
-          slug
+          telefono,
+          direccion
         )
       `)
       .eq('telefono_cliente', telefono)
       .order('fecha', { ascending: false });
-    
+
     if (error) {
-      console.error('Error al buscar citas por teléfono:', error);
+      console.error('Error al buscar citas:', error);
       return { success: false, message: error.message };
     }
-    
-    return { success: true, data };
-  } catch (err) {
-    console.error('Error en buscarCitasPorTelefono:', err);
-    return { success: false, message: 'Error al procesar la solicitud' };
+
+    return {
+      success: true,
+      citas: data || []
+    };
+  } catch (error) {
+    console.error('Error en buscarCitasPorTelefono:', error);
+    return { 
+      success: false, 
+      message: 'Error al buscar las citas' 
+    };
   }
 };
