@@ -26,19 +26,25 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
       return;
     }
 
+    // Validar que haya un servicio seleccionado
+    if (!servicioId || servicioId.trim() === '') {
+      console.log("No service selected, skipping day availability loading");
+      setDiasDisponibles([]);
+      setDiasSeleccionablesMes(new Set());
+      setError("Por favor, selecciona un servicio antes de consultar la disponibilidad.");
+      return;
+    }
+
     try {
       console.log(`Obteniendo días disponibles para negocio ID: ${negocioId} en año: ${anio}, mes: ${mes}, servicio: ${servicioId}`);
       setIsLoading(true);
       setError(null);
 
-      // Asegurarse que servicioId sea undefined si está vacío para que la función en el backend use la duración predeterminada
-      const servicioIdParaEnviar = servicioId && servicioId.trim() !== '' ? servicioId : undefined;
-
       const diasDispResult = await getDiasDisponibles(
         negocioId,
         anio,
         mes,
-        servicioIdParaEnviar
+        servicioId
       );
 
       if (diasDispResult.success && diasDispResult.data) {
@@ -101,9 +107,17 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
     if (negocioId) {
       console.log(`Loading availability for business ID ${negocioId} for month ${mesActual.mes}/${mesActual.anio}`);
       setDiasSeleccionablesMes(new Set());
-      cargarDiasDisponibles(mesActual.anio, mesActual.mes);
+      
+      // Solo cargar días disponibles si hay un servicio seleccionado
+      if (servicioId && servicioId.trim() !== '') {
+        cargarDiasDisponibles(mesActual.anio, mesActual.mes);
+      } else {
+        setDiasDisponibles([]);
+        setDiasSeleccionablesMes(new Set());
+        setError("Por favor, selecciona un servicio antes de consultar la disponibilidad.");
+      }
     }
-  }, [negocioId, mesActual, cargarDiasDisponibles, servicioId]); // Adding servicioId dependency to refresh when it changes
+  }, [negocioId, mesActual, cargarDiasDisponibles, servicioId]);
 
   useEffect(() => {
     const cargarHorasDisponibles = async () => {
@@ -113,21 +127,27 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         return;
       }
 
+      // Validar que haya un servicio seleccionado
+      if (!servicioId || servicioId.trim() === '') {
+        console.log("No service selected, skipping time slot loading");
+        setHorasDisponibles([]);
+        setError("Por favor, selecciona un servicio antes de consultar la disponibilidad.");
+        return;
+      }
+
       try {
         console.log(`Loading time slots for date: ${format(fecha, 'yyyy-MM-dd')}`);
         setCargandoHorarios(true);
         setError(null);
 
         const fechaFormateada = format(fecha, 'yyyy-MM-dd');
-        // Asegurarse que servicioId sea undefined si está vacío
-        const servicioIdParaEnviar = servicioId && servicioId.trim() !== '' ? servicioId : undefined;
-
-        console.log(`Obteniendo horarios para negocio: ${negocioId}, fecha: ${fechaFormateada}, servicio: ${servicioIdParaEnviar || 'no especificado'}`);
+        
+        console.log(`Obteniendo horarios para negocio: ${negocioId}, fecha: ${fechaFormateada}, servicio: ${servicioId}`);
         
         const result = await getHorariosDisponibles(
           negocioId,
           fechaFormateada,
-          servicioIdParaEnviar
+          servicioId
         );
 
         if (result.success && result.data) {
@@ -168,8 +188,13 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
     };
 
     // Cargar horarios cuando cambia la fecha o servicio
-    if (negocioId && fecha && (servicioId || servicioId === '')) {
-      cargarHorasDisponibles();
+    if (negocioId && fecha) {
+      if (servicioId && servicioId.trim() !== '') {
+        cargarHorasDisponibles();
+      } else {
+        setHorasDisponibles([]);
+        setError("Por favor, selecciona un servicio antes de consultar la disponibilidad.");
+      }
     } else {
       setHorasDisponibles([]);
     }

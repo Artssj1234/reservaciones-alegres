@@ -7,6 +7,8 @@ import DatePickerCalendar from './DatePickerCalendar';
 import TimeSlotGrid from './TimeSlotGrid';
 import NoAvailabilityAlert from './NoAvailabilityAlert';
 import { format } from 'date-fns';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface DateTimePickerProps {
   date: Date;
@@ -91,6 +93,35 @@ const DateTimePicker = ({
       }
     }
   };
+
+  // Mensaje claro cuando no hay servicio seleccionado
+  if (error && error.includes("selecciona un servicio")) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold text-center mb-4">Selecciona fecha y hora</h2>
+        
+        <Alert variant="warning" className="bg-amber-50 border-amber-200 text-amber-800">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          <AlertDescription className="font-medium">
+            Por favor, selecciona un servicio antes de consultar la disponibilidad.
+          </AlertDescription>
+        </Alert>
+        
+        <div className="flex justify-between pt-4">
+          <Button variant="outline" onClick={onBack}>
+            Atrás
+          </Button>
+          <Button 
+            onClick={onNext} 
+            disabled={true}
+            className="bg-green-500 hover:bg-green-600"
+          >
+            Continuar
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Show error message if no available days and not in loading state
   if ((diasSeleccionablesMes.size === 0 && !cargandoHorarios) || error) {

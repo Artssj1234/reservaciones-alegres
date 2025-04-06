@@ -70,6 +70,15 @@ const CitaPublicaPage = () => {
     }
   }, [negocio, servicios, step, formData, horasDisponibles, diasSeleccionablesMes]);
 
+  // Validar duración de servicio
+  const selectedService = servicios.find(s => s.id === formData.servicio_id);
+  const serviceTieneDuracion = selectedService && selectedService.duracion_minutos > 0;
+
+  // Mostrar error si el servicio seleccionado no tiene duración configurada
+  const serviceError = selectedService && !serviceTieneDuracion 
+    ? "El servicio seleccionado no tiene una duración configurada. Por favor, contacta al negocio." 
+    : null;
+
   const handleContactClick = () => {
     setContactDialogOpen(true);
   };
@@ -93,8 +102,6 @@ const CitaPublicaPage = () => {
       />
     );
   }
-
-  const selectedService = servicios.find(s => s.id === formData.servicio_id);
 
   return (
     <>
@@ -122,21 +129,32 @@ const CitaPublicaPage = () => {
         )}
 
         {step === 2 && (
-          <DateTimePicker 
-            date={formData.fecha}
-            selectedTime={formData.hora_inicio}
-            diasSeleccionablesMes={diasSeleccionablesMes}
-            horasDisponibles={horasDisponibles}
-            cargandoHorarios={cargandoHorarios || isLoadingDisponibilidad}
-            duracionServicio={selectedService?.duracion_minutos || 30}
-            error={disponibilidadError}
-            onDateChange={handleFechaChange}
-            onTimeChange={handleHoraChange}
-            onMonthChange={handleMonthChange}
-            onNext={handleNext}
-            onBack={handleBack}
-            onContactClick={handleContactClick}
-          />
+          <>
+            {serviceError && (
+              <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-800 mb-4">
+                <AlertCircle className="h-4 w-4 mr-2" />
+                <AlertDescription>
+                  {serviceError}
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <DateTimePicker 
+              date={formData.fecha}
+              selectedTime={formData.hora_inicio}
+              diasSeleccionablesMes={diasSeleccionablesMes}
+              horasDisponibles={horasDisponibles}
+              cargandoHorarios={cargandoHorarios || isLoadingDisponibilidad}
+              duracionServicio={selectedService?.duracion_minutos || 30}
+              error={disponibilidadError || serviceError}
+              onDateChange={handleFechaChange}
+              onTimeChange={handleHoraChange}
+              onMonthChange={handleMonthChange}
+              onNext={handleNext}
+              onBack={handleBack}
+              onContactClick={handleContactClick}
+            />
+          </>
         )}
 
         {step === 3 && (

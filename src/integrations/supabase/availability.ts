@@ -14,33 +14,35 @@ interface CrearCitaSeguraResponse {
  * Obtiene los horarios disponibles para un negocio en una fecha específica
  * @param negocioId ID del negocio
  * @param fecha Fecha en formato YYYY-MM-DD o un objeto Date
- * @param servicioId ID del servicio (opcional)
+ * @param servicioId ID del servicio (obligatorio)
  * @returns Un objeto con los horarios disponibles
  */
 export const getHorariosDisponibles = async (
   negocioId: string,
   fecha: string | Date,
-  servicioId?: string
+  servicioId: string
 ): Promise<{ success: boolean; message?: string; data: HorarioDisponible[] }> => {
   const fechaStr = fecha instanceof Date ? fecha.toISOString().split('T')[0] : fecha;
   
   console.log('Obteniendo horarios disponibles para negocio ID:', negocioId, 'en fecha:', fechaStr, 'para servicio ID:', servicioId || 'undefined');
 
+  // Validar que haya un ID de servicio válido
+  if (!servicioId || servicioId.trim() === '') {
+    console.error('Error: No se proporcionó un ID de servicio válido');
+    return { 
+      success: false, 
+      message: 'Por favor, selecciona un servicio antes de consultar la disponibilidad.', 
+      data: [] 
+    };
+  }
+
   try {
     // Preparar parámetros para la función RPC
-    const params: { 
-      p_negocio_id: string; 
-      p_fecha: string; 
-      p_servicio_id?: string;
-    } = {
+    const params = {
       p_negocio_id: negocioId,
-      p_fecha: fechaStr
+      p_fecha: fechaStr,
+      p_servicio_id: servicioId
     };
-    
-    // Agregar servicio_id si se proporciona
-    if (servicioId && servicioId.trim() !== '') {
-      params.p_servicio_id = servicioId;
-    }
     
     console.log('Parámetros para obtener_horarios_disponibles:', params);
     
@@ -69,32 +71,34 @@ export const getHorariosDisponibles = async (
  * @param negocioId ID del negocio
  * @param anio Año
  * @param mes Mes (1-12)
- * @param servicioId ID del servicio (opcional)
+ * @param servicioId ID del servicio (obligatorio)
  * @returns Un objeto con los días disponibles
  */
 export const getDiasDisponibles = async (
   negocioId: string, 
   anio: number, 
   mes: number, 
-  servicioId?: string
+  servicioId: string
 ): Promise<{ success: boolean; message?: string; data: DiaDisponible[] }> => {
   console.log('Obteniendo días disponibles para negocio ID:', negocioId, 'en año:', anio, 'mes:', mes, 'servicio ID:', servicioId || 'undefined');
   
+  // Validar que haya un ID de servicio válido
+  if (!servicioId || servicioId.trim() === '') {
+    console.error('Error: No se proporcionó un ID de servicio válido');
+    return { 
+      success: false, 
+      message: 'Por favor, selecciona un servicio antes de consultar la disponibilidad.', 
+      data: [] 
+    };
+  }
+  
   try {
-    const params: {
-      p_negocio_id: string;
-      p_anio: number;
-      p_mes: number;
-      p_servicio_id?: string;
-    } = {
+    const params = {
       p_negocio_id: negocioId,
       p_anio: anio,
-      p_mes: mes
+      p_mes: mes,
+      p_servicio_id: servicioId
     };
-    
-    if (servicioId && servicioId.trim() !== '') {
-      params.p_servicio_id = servicioId;
-    }
     
     console.log('Parámetros para obtener_dias_disponibles_mes:', params);
     
