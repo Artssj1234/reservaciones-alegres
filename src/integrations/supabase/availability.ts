@@ -1,6 +1,14 @@
 
 import { supabase } from './base-client';
 import { DiaDisponible, HorarioDisponible } from '@/types';
+import { Json } from './types';
+
+// Interface for the response from crear_cita_segura RPC function
+interface CrearCitaSeguraResponse {
+  success: boolean;
+  message?: string;
+  cita_id?: string;
+}
 
 /**
  * Obtiene los horarios disponibles para un negocio en una fecha específica
@@ -168,6 +176,7 @@ export const crearCitaSegura = async (citaData: {
   console.log('Creando cita segura:', citaData);
   
   try {
+    // Using explicit type assertion to help TypeScript understand the response structure
     const { data, error } = await supabase.rpc(
       "crear_cita_segura",
       {
@@ -179,7 +188,7 @@ export const crearCitaSegura = async (citaData: {
         p_hora_inicio: citaData.hora_inicio,
         p_hora_fin: citaData.hora_fin
       }
-    );
+    ) as { data: CrearCitaSeguraResponse | null, error: any };
     
     if (error) {
       console.error('Error al crear cita segura:', error);
@@ -192,14 +201,64 @@ export const crearCitaSegura = async (citaData: {
         message: data.message || 'Cita creada correctamente',
         cita_id: data.cita_id
       };
-    } else {
+    } else if (data) {
       return { 
         success: false, 
-        message: data?.message || 'No se pudo crear la cita' 
+        message: data.message || 'No se pudo crear la cita' 
+      };
+    } else {
+      return {
+        success: false,
+        message: 'No se recibió respuesta del servidor'
       };
     }
   } catch (err) {
     console.error('Error en crearCitaSegura:', err);
+    return { success: false, message: 'Error al procesar la solicitud' };
+  }
+};
+
+/**
+ * Get appointments by phone number
+ * @param telefono Phone number to search for
+ * @returns List of appointments
+ */
+export const getCitaByTelefono = async (
+  telefono: string
+): Promise<{ success: boolean; message?: string; data?: any[] }> => {
+  try {
+    const { data, error } = await supabase
+      .from('citas')
+      .select(`
+        id,
+        fecha,
+        hora_inicio,
+        hora_fin,
+        estado,
+        nombre_cliente,
+        telefono_cliente,
+        servicios (
+          id,
+          nombre,
+          duracion_minutos
+        ),
+        negocios (
+          id,
+          nombre,
+          slug
+        )
+      `)
+      .eq('telefono_cliente', telefono)
+      .order('fecha', { ascending: false });
+    
+    if (error) {
+      console.error('Error al buscar citas por teléfono:', error);
+      return { success: false, message: error.message };
+    }
+    
+    return { success: true, data };
+  } catch (err) {
+    console.error('Error en getCitaByTelefono:', err);
     return { success: false, message: 'Error al procesar la solicitud' };
   }
 };
