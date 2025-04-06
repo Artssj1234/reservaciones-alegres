@@ -68,10 +68,10 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         }
       } else {
         console.error('Error al cargar días disponibles:', diasDispResult.message);
-        setError("No se pudo cargar la disponibilidad. Intenta más tarde.");
+        setError(diasDispResult.message || "No se pudo cargar la disponibilidad. Intenta más tarde.");
         toast({
           title: "Error",
-          description: "No se pudo cargar la disponibilidad. Intenta más tarde.",
+          description: diasDispResult.message || "No se pudo cargar la disponibilidad. Intenta más tarde.",
           variant: "destructive"
         });
         setDiasDisponibles([]);
@@ -165,10 +165,10 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
           }
         } else {
           console.error('Error al cargar horas disponibles:', result.message);
-          setError("No se pudo cargar los horarios disponibles.");
+          setError(result.message || "No se pudo cargar los horarios disponibles.");
           toast({
             title: "Error",
-            description: "No se pudo cargar los horarios disponibles.",
+            description: result.message || "No se pudo cargar los horarios disponibles.",
             variant: "destructive"
           });
           setHorasDisponibles([]);

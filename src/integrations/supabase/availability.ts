@@ -179,6 +179,14 @@ export const crearCitaSegura = async (citaData: {
 }): Promise<{ success: boolean; message?: string; cita_id?: string }> => {
   console.log('Creando cita segura:', citaData);
   
+  // Validate required fields
+  if (!citaData.servicio_id || citaData.servicio_id.trim() === '') {
+    return { 
+      success: false, 
+      message: 'El servicio es obligatorio para crear una cita' 
+    };
+  }
+  
   try {
     // We need to use a more generic approach since TypeScript doesn't recognize this RPC function
     const { data, error } = await supabase.rpc(
