@@ -176,9 +176,9 @@ export const crearCitaSegura = async (citaData: {
   console.log('Creando cita segura:', citaData);
   
   try {
-    // Using explicit type assertion to help TypeScript understand the response structure
+    // We need to use a more generic approach since TypeScript doesn't recognize this RPC function
     const { data, error } = await supabase.rpc(
-      "crear_cita_segura",
+      "crear_cita_segura" as any,
       {
         p_negocio_id: citaData.negocio_id,
         p_cliente_nombre: citaData.nombre_cliente,
@@ -223,7 +223,7 @@ export const crearCitaSegura = async (citaData: {
  * @param telefono Phone number to search for
  * @returns List of appointments
  */
-export const getCitaByTelefono = async (
+export const buscarCitasPorTelefono = async (
   telefono: string
 ): Promise<{ success: boolean; message?: string; data?: any[] }> => {
   try {
@@ -258,7 +258,7 @@ export const getCitaByTelefono = async (
     
     return { success: true, data };
   } catch (err) {
-    console.error('Error en getCitaByTelefono:', err);
+    console.error('Error en buscarCitasPorTelefono:', err);
     return { success: false, message: 'Error al procesar la solicitud' };
   }
 };

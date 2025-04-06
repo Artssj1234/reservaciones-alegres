@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { Search, Calendar, Clock, ChevronLeft } from 'lucide-react';
-import { getCitaByTelefono } from '@/integrations/supabase/client';
+import { buscarCitasPorTelefono } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -33,7 +33,7 @@ const VerificarCitaPage = () => {
     setIsLoading(true);
     
     try {
-      const result = await getCitaByTelefono(telefono.trim());
+      const result = await buscarCitasPorTelefono(telefono.trim());
       
       if (result.success && result.data && result.data.length > 0) {
         setCitasEncontradas(result.data);

@@ -11,7 +11,7 @@ export * from './auth';
 // Re-export business functionality
 export * from './business';
 
-// Re-export appointments functionality
+// Re-export appointments functionality  
 export * from './appointments';
 
 // Re-export services functionality
@@ -21,4 +21,10 @@ export * from './services';
 export * from './schedules';
 
 // Re-export availability functionality
-export * from './availability';
+export {
+  getHorariosDisponibles,
+  getDiasDisponibles,
+  verificarDisponibilidad,
+  crearCitaSegura,
+  buscarCitasPorTelefono
+} from './availability';

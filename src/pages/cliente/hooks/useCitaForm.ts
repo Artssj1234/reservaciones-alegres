@@ -1,7 +1,6 @@
-
 import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { crearCitaSegura, getCitaByTelefono } from '@/integrations/supabase/client';
+import { crearCitaSegura, buscarCitasPorTelefono } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
 interface CitaFormData {
@@ -178,7 +177,7 @@ export const useCitaForm = (negocioId: string | undefined) => {
     }
     
     try {
-      const result = await getCitaByTelefono(telefono.trim());
+      const result = await buscarCitasPorTelefono(telefono.trim());
       
       if (result.success && result.data && result.data.length > 0) {
         setCitasEncontradas(result.data);
