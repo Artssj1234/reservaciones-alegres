@@ -53,7 +53,7 @@ export default function ReservaFlujoCliente({ negocioId }: { negocioId: string }
       const { data, error } = await supabase.rpc('get_dias_con_disponibilidad', {
         p_negocio_id: negocioId,
         p_servicio_id: servicioSeleccionado.id,
-        p_anio: anio,
+        p_anio: parseInt(anio),
         p_mes: mes
       });
 
