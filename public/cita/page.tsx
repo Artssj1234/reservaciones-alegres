@@ -1,332 +1,168 @@
+'use client';
 
 import { useState, useEffect } from 'react';
-import { format, startOfMonth, addDays } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getDiasDisponibles, getHorariosDisponibles } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Loader2, CalendarIcon } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
 export default function ReservaFlujoCliente({ negocioId }: { negocioId: string }) {
   const [step, setStep] = useState(1);
   const [servicios, setServicios] = useState<any[]>([]);
   const [servicioSeleccionado, setServicioSeleccionado] = useState<any>(null);
-  const [fechaSeleccionada, setFechaSeleccionada] = useState<Date>(new Date());
-  const [diasDisponibles, setDiasDisponibles] = useState<Set<string>>(new Set());
-  const [horas, setHoras] = useState<any[]>([]);
+  const [fechaSeleccionada, setFechaSeleccionada] = useState<Date | null>(new Date());
+  const [bloquesDisponibles, setBloquesDisponibles] = useState<any[]>([]);
   const [horaSeleccionada, setHoraSeleccionada] = useState('');
   const [cliente, setCliente] = useState({ nombre: '', telefono: '' });
   const [cargando, setCargando] = useState(false);
-  const [cargandoHoras, setCargandoHoras] = useState(false);
   const { toast } = useToast();
 
+  // 1. Obtener servicios al montar
   useEffect(() => {
     const fetchServicios = async () => {
-      try {
-        setCargando(true);
-        const res = await fetch(`/api/negocios/${negocioId}/servicios`);
-        if (!res.ok) {
-          throw new Error('Error al cargar los servicios');
-        }
-        const data = await res.json();
+      const { data, error } = await supabase
+        .from('servicios')
+        .select('*')
+        .eq('negocio_id', negocioId);
+
+      if (error) {
+        toast({ title: 'Error', description: 'No se pudieron cargar los servicios.' });
+      } else {
         setServicios(data);
-      } catch (error) {
-        console.error('Error al cargar servicios:', error);
-        toast({
-          title: 'Error',
-          description: 'No se pudieron cargar los servicios',
-          variant: 'destructive',
-        });
-      } finally {
-        setCargando(false);
       }
     };
 
-    if (negocioId) {
-      fetchServicios();
-    }
-  }, [negocioId, toast]);
+    fetchServicios();
+  }, [negocioId]);
 
-  const cargarDiasDisponibles = async (date: Date) => {
-    if (!servicioSeleccionado) return;
-    
-    try {
-      const anio = date.getFullYear();
-      const mes = date.getMonth() + 1;
-      
-      setCargando(true);
-      const res = await getDiasDisponibles(negocioId, anio, mes, servicioSeleccionado.id);
-      
-      if (res.success) {
-        const nuevosDisponibles = new Set<string>();
-        res.data.forEach(dia => {
-          if (dia.tiene_disponibilidad) {
-            nuevosDisponibles.add(dia.fecha);
-          }
-        });
-        setDiasDisponibles(nuevosDisponibles);
-        
-        if (nuevosDisponibles.size === 0) {
-          toast({
-            title: 'Información',
-            description: 'No hay días disponibles en este mes',
-          });
-        }
-      } else {
-        toast({
-          title: 'Error',
-          description: 'No se pudo cargar la disponibilidad',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Error al cargar días disponibles:', error);
-      toast({
-        title: 'Error',
-        description: 'Error al verificar disponibilidad',
-        variant: 'destructive',
-      });
-    } finally {
-      setCargando(false);
-    }
-  };
-
-  const handleCalendarMonthChange = (date: Date) => {
-    cargarDiasDisponibles(date);
-  };
-
-  const handleDateSelect = (date: Date | undefined) => {
-    if (!date) return;
-    setFechaSeleccionada(date);
-    cargarHorariosPorFecha(date);
-  };
-
-  const cargarHorariosPorFecha = async (fecha: Date) => {
-    if (!servicioSeleccionado) return;
-    
-    try {
-      setCargandoHoras(true);
-      const fechaStr = format(fecha, 'yyyy-MM-dd');
-      const res = await getHorariosDisponibles(negocioId, fechaStr, servicioSeleccionado.id);
-      
-      if (res.success) {
-        setHoras(res.data);
-        setHoraSeleccionada('');
-        
-        if (res.data.filter(h => h.disponible).length === 0) {
-          toast({
-            title: 'Información',
-            description: 'No hay horarios disponibles para esta fecha',
-          });
-        }
-      } else {
-        toast({
-          title: 'Error',
-          description: 'No se pudieron cargar los horarios',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Error al cargar horarios:', error);
-      toast({
-        title: 'Error',
-        description: 'Error al cargar los horarios disponibles',
-        variant: 'destructive',
-      });
-    } finally {
-      setCargandoHoras(false);
-    }
-  };
-
+  // 2. Obtener bloques disponibles al cambiar servicio o fecha
   useEffect(() => {
-    if (step === 2 && servicioSeleccionado) {
-      cargarDiasDisponibles(fechaSeleccionada);
-    }
-  }, [step, servicioSeleccionado]);
+    const obtenerBloques = async () => {
+      if (!servicioSeleccionado || !fechaSeleccionada) return;
 
-  const crearCita = async () => {
-    try {
-      const res = await fetch('/api/citas', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          negocio_id: negocioId,
-          servicio_id: servicioSeleccionado.id,
-          fecha: format(fechaSeleccionada, 'yyyy-MM-dd'),
-          hora: horaSeleccionada,
-          cliente,
-        }),
+      const { data, error } = await supabase.rpc('get_bloques_disponibles', {
+        p_negocio_id: negocioId,
+        p_servicio_id: servicioSeleccionado.id,
+        p_fecha: format(fechaSeleccionada, 'yyyy-MM-dd')
       });
 
-      if (res.ok) {
-        const { telefono } = await res.json();
-        window.location.href = `/citas/${telefono}`;
+      if (error) {
+        console.error(error);
+        toast({ title: 'Error', description: 'No se pudieron cargar los horarios disponibles.' });
       } else {
-        toast({ title: 'Error', description: 'No se pudo crear la cita', variant: 'destructive' });
+        setBloquesDisponibles(data);
       }
-    } catch (error) {
-      console.error('Error al crear la cita:', error);
-      toast({ title: 'Error', description: 'Error al procesar la solicitud', variant: 'destructive' });
-    }
-  };
+    };
 
-  const esFechaDisponible = (date: Date) => {
-    const fechaFormateada = format(date, 'yyyy-MM-dd');
-    return diasDisponibles.has(fechaFormateada);
+    obtenerBloques();
+  }, [servicioSeleccionado, fechaSeleccionada]);
+
+  const handleConfirmar = () => {
+    if (!horaSeleccionada || !cliente.nombre || !cliente.telefono) {
+      toast({ title: 'Completa todos los campos para continuar.' });
+      return;
+    }
+
+    // Aquí iría la lógica para insertar la cita
+    toast({ title: 'Cita solicitada (simulado)', description: `Hora: ${horaSeleccionada}` });
   };
 
   return (
-    <div className="max-w-md mx-auto p-4">
-      {cargando && step !== 3 && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-50">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    <div className="max-w-xl mx-auto p-4 space-y-6">
+      <h1 className="text-2xl font-bold text-center">Reservar cita</h1>
+
+      {/* Paso 1: seleccionar servicio */}
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold">1. Selecciona un servicio</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {servicios.map(serv => (
+            <Button
+              key={serv.id}
+              variant={servicioSeleccionado?.id === serv.id ? 'default' : 'outline'}
+              onClick={() => {
+                setServicioSeleccionado(serv);
+                setBloquesDisponibles([]);
+                setHoraSeleccionada('');
+              }}
+            >
+              {serv.nombre}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Paso 2: seleccionar fecha */}
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold">2. Selecciona una fecha</h2>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full justify-start text-left font-normal">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {fechaSeleccionada ? format(fechaSeleccionada, 'PPP', { locale: es }) : 'Elige una fecha'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={fechaSeleccionada}
+              onSelect={setFechaSeleccionada}
+              locale={es}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Paso 3: seleccionar horario */}
+      {bloquesDisponibles.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">3. Selecciona un horario</h2>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {bloquesDisponibles.map(b => {
+              const label = format(new Date(b.inicio_bloque), 'HH:mm');
+              return (
+                <Button
+                  key={b.inicio_bloque}
+                  variant={horaSeleccionada === b.inicio_bloque ? 'default' : 'outline'}
+                  onClick={() => setHoraSeleccionada(b.inicio_bloque)}
+                >
+                  {label}
+                </Button>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {step === 1 && (
-        <Card>
-          <CardContent className="pt-6 space-y-4">
-            <h2 className="text-xl font-bold">Selecciona un servicio</h2>
-            {servicios.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No hay servicios disponibles para este negocio
-              </p>
-            ) : (
-              <div className="grid gap-2">
-                {servicios.map(s => (
-                  <Button
-                    key={s.id}
-                    variant={servicioSeleccionado?.id === s.id ? "default" : "outline"} 
-                    className="justify-start w-full"
-                    onClick={() => {
-                      setServicioSeleccionado(s);
-                      setStep(2);
-                    }}
-                  >
-                    <div className="flex justify-between w-full">
-                      <span>{s.nombre}</span>
-                      <span className="text-sm">{s.duracion_minutos} min</span>
-                    </div>
-                  </Button>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {step === 2 && servicioSeleccionado && (
-        <Card>
-          <CardContent className="pt-6 space-y-4">
-            <h2 className="text-xl font-bold">Selecciona fecha y hora</h2>
-            
-            <div className="border rounded-md p-3">
-              <Calendar
-                mode="single"
-                selected={fechaSeleccionada}
-                onSelect={handleDateSelect}
-                onMonthChange={handleCalendarMonthChange}
-                disabled={(date) => {
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  return date < today || !esFechaDisponible(date);
-                }}
-                locale={es}
-                initialFocus
-                className="pointer-events-auto"
-              />
-            </div>
-
-            {cargandoHoras ? (
-              <div className="flex justify-center p-4">
-                <Loader2 className="h-6 w-6 animate-spin" />
-              </div>
-            ) : (
-              fechaSeleccionada && (
-                <div className="space-y-2">
-                  <h3 className="font-medium">Horarios para {format(fechaSeleccionada, 'dd/MM/yyyy')}</h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    {horas.filter(h => h.disponible).length > 0 ? (
-                      horas.filter(h => h.disponible).map(h => (
-                        <Button
-                          key={h.hora_inicio}
-                          onClick={() => setHoraSeleccionada(h.hora_inicio)}
-                          variant={horaSeleccionada === h.hora_inicio ? "default" : "outline"}
-                          size="sm"
-                        >
-                          {h.hora_inicio.slice(0, 5)}
-                        </Button>
-                      ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground col-span-3">
-                        No hay horarios disponibles para esta fecha
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )
-            )}
-
-            <div className="flex justify-between pt-4">
-              <Button variant="outline" onClick={() => setStep(1)}>Atrás</Button>
-              <Button onClick={() => setStep(3)} disabled={!horaSeleccionada}>
-                Siguiente
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {step === 3 && (
-        <Card>
-          <CardContent className="pt-6 space-y-4">
-            <h2 className="text-xl font-bold">Confirma tus datos</h2>
-            
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium mb-1">Servicio:</p>
-                <p className="text-sm">{servicioSeleccionado?.nombre}</p>
-              </div>
-              
-              <div>
-                <p className="text-sm font-medium mb-1">Fecha y hora:</p>
-                <p className="text-sm">
-                  {format(fechaSeleccionada, 'dd/MM/yyyy')} a las {horaSeleccionada.slice(0, 5)}
-                </p>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Input 
-                placeholder="Tu nombre" 
-                value={cliente.nombre} 
-                onChange={e => setCliente({ ...cliente, nombre: e.target.value })}
-                className="mt-4"
-              />
-              <Input 
-                placeholder="Tu teléfono" 
-                value={cliente.telefono} 
-                onChange={e => setCliente({ ...cliente, telefono: e.target.value })} 
-              />
-            </div>
-            
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(2)}>Atrás</Button>
-              <Button 
-                onClick={crearCita} 
-                disabled={!cliente.nombre || !cliente.telefono}
-              >
-                Confirmar cita
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Paso 4: datos del cliente */}
+      {horaSeleccionada && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">4. Tus datos</h2>
+          <Input
+            placeholder="Nombre"
+            value={cliente.nombre}
+            onChange={e => setCliente({ ...cliente, nombre: e.target.value })}
+          />
+          <Input
+            placeholder="Teléfono"
+            value={cliente.telefono}
+            onChange={e => setCliente({ ...cliente, telefono: e.target.value })}
+          />
+          <Button className="w-full" onClick={handleConfirmar}>
+            Confirmar cita
+          </Button>
+        </div>
       )}
     </div>
   );
+}
+
+function CalendarIcon(props: any) {
+  return <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
 }
