@@ -35,8 +35,8 @@ const VerificarCitaPage = () => {
     try {
       const result = await buscarCitasPorTelefono(telefono.trim());
       
-      if (result.success && result.data && result.data.length > 0) {
-        setCitasEncontradas(result.data);
+      if (result.success && result.citas && result.citas.length > 0) {
+        setCitasEncontradas(result.citas);
       } else {
         setCitasEncontradas([]);
         toast({

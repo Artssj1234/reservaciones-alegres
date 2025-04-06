@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { crearCitaSegura, buscarCitasPorTelefono } from '@/integrations/supabase/client';
@@ -138,8 +139,8 @@ export const useCitaForm = (negocioId: string | undefined) => {
       const result = await crearCitaSegura(citaData);
       
       if (result.success) {
-        if (result.cita_id) {
-          setCitaId(result.cita_id);
+        if (result.citaId) {
+          setCitaId(result.citaId);
         }
         setSuccess(true);
         
@@ -179,8 +180,8 @@ export const useCitaForm = (negocioId: string | undefined) => {
     try {
       const result = await buscarCitasPorTelefono(telefono.trim());
       
-      if (result.success && result.data && result.data.length > 0) {
-        setCitasEncontradas(result.data);
+      if (result.success && result.citas && result.citas.length > 0) {
+        setCitasEncontradas(result.citas);
       } else {
         setCitasEncontradas([]);
         toast({

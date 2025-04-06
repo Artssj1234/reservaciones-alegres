@@ -139,44 +139,64 @@ export const verificarDisponibilidad = async (
   }
 };
 
+// Updated to use a direct query with structured parameters instead of rpc
 export const crearCitaSegura = async (
-  negocioId: string,
-  clienteNombre: string,
-  clienteTelefono: string,
-  servicioId: string,
-  fecha: string,
-  horaInicio: string,
-  horaFin: string
+  citaData: {
+    negocio_id: string,
+    nombre_cliente: string,
+    telefono_cliente: string,
+    servicio_id: string,
+    fecha: string,
+    hora_inicio: string,
+    hora_fin: string
+  }
 ): Promise<{ success: boolean; message?: string; citaId?: string }> => {
-  if (!negocioId || !clienteNombre || !clienteTelefono || !servicioId || !fecha || !horaInicio || !horaFin) {
+  if (!citaData.negocio_id || !citaData.nombre_cliente || !citaData.telefono_cliente || 
+      !citaData.servicio_id || !citaData.fecha || !citaData.hora_inicio || !citaData.hora_fin) {
     return { success: false, message: 'Faltan datos requeridos para crear la cita' };
   }
 
   try {
+    // First verify availability
+    const disponibilidadResult = await verificarDisponibilidad(
+      citaData.negocio_id,
+      citaData.fecha,
+      citaData.hora_inicio,
+      citaData.hora_fin
+    );
+
+    if (!disponibilidadResult.success || !disponibilidadResult.disponible) {
+      return { 
+        success: false, 
+        message: 'El horario seleccionado ya no está disponible' 
+      };
+    }
+
+    // If available, create the appointment
     const { data, error } = await supabase
-      .rpc('crear_cita_segura', {
-        p_negocio_id: negocioId,
-        p_cliente_nombre: clienteNombre,
-        p_cliente_telefono: clienteTelefono,
-        p_servicio_id: servicioId,
-        p_fecha: fecha,
-        p_hora_inicio: horaInicio,
-        p_hora_fin: horaFin
-      });
+      .from('citas')
+      .insert([{
+        negocio_id: citaData.negocio_id,
+        nombre_cliente: citaData.nombre_cliente,
+        telefono_cliente: citaData.telefono_cliente,
+        servicio_id: citaData.servicio_id,
+        fecha: citaData.fecha,
+        hora_inicio: citaData.hora_inicio,
+        hora_fin: citaData.hora_fin,
+        estado: 'pendiente'
+      }])
+      .select('id')
+      .single();
 
     if (error) {
       console.error('Error al crear cita:', error);
       return { success: false, message: error.message };
     }
 
-    if (!data.success) {
-      return { success: false, message: data.message };
-    }
-
     return {
       success: true,
-      message: data.message,
-      citaId: data.cita_id
+      message: 'Cita creada correctamente',
+      citaId: data.id
     };
   } catch (error) {
     console.error('Error en crearCitaSegura:', error);
@@ -213,7 +233,8 @@ export const buscarCitasPorTelefono = async (
           id,
           nombre,
           telefono,
-          direccion
+          direccion,
+          slug
         )
       `)
       .eq('telefono_cliente', telefono)
