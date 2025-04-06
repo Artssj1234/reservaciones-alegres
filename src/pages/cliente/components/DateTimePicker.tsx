@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import DatePickerCalendar from './DatePickerCalendar';
 import TimeSlotGrid from './TimeSlotGrid';
 import NoAvailabilityAlert from './NoAvailabilityAlert';
+import { format } from 'date-fns';
 
 interface DateTimePickerProps {
   date: Date;
@@ -51,17 +52,32 @@ const DateTimePicker = ({
   useEffect(() => {
     if (horasDisponibles && horasDisponibles.length > 0) {
       console.log('Filtrando horarios disponibles:', horasDisponibles);
+      // Solo los horarios marcados como disponibles
       const filteredHoras = horasDisponibles.filter(hora => hora.disponible);
-      setHorasDisponiblesFiltered(horasDisponibles); // Mostrar todos pero deshabilitar los no disponibles
       
-      // If the currently selected time is no longer available, clear it
+      // Actualizar el estado con todos los horarios pero mostrando solo los disponibles
+      setHorasDisponiblesFiltered(filteredHoras);
+      
+      // Si el tiempo seleccionado ya no está disponible, limpiarlo
       if (selectedTime && !filteredHoras.some(hora => hora.hora_inicio === selectedTime)) {
         onTimeChange('');
+        
+        if (selectedTime) {
+          toast({
+            title: "Información",
+            description: "La hora seleccionada ya no está disponible.",
+          });
+        }
+      }
+      
+      // Informar si no hay horarios disponibles
+      if (filteredHoras.length === 0 && !cargandoHorarios) {
+        console.log('No se encontraron horarios disponibles en esta fecha');
       }
     } else {
       setHorasDisponiblesFiltered([]);
     }
-  }, [horasDisponibles, selectedTime, onTimeChange]);
+  }, [horasDisponibles, selectedTime, onTimeChange, cargandoHorarios, toast]);
   
   const handleDateSelect = (newDate: Date | undefined) => {
     if (newDate) {
@@ -69,7 +85,7 @@ const DateTimePicker = ({
       setFechaSeleccionada(newDate);
       onDateChange(newDate);
       
-      // Clear selected time when changing date
+      // Limpiar hora seleccionada al cambiar de fecha
       if (selectedTime) {
         onTimeChange('');
       }
@@ -86,17 +102,9 @@ const DateTimePicker = ({
     />;
   }
 
-  if (cargandoHorarios && horasDisponibles.length === 0) {
+  if (cargandoHorarios && diasSeleccionablesMes.size === 0) {
     return <NoAvailabilityAlert cargandoHorarios={true} onBack={onBack} />;
   }
-  
-  // Helper function para formatear fecha
-  const format = (date: Date, formatStr: string) => {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${year}-${month}-${day}`;
-  };
 
   return (
     <div className="space-y-6">
@@ -126,7 +134,7 @@ const DateTimePicker = ({
         </Button>
         <Button 
           onClick={onNext} 
-          disabled={!selectedTime || diasSeleccionablesMes.size === 0}
+          disabled={!selectedTime || horasDisponiblesFiltered.length === 0}
           className="bg-green-500 hover:bg-green-600"
         >
           Continuar

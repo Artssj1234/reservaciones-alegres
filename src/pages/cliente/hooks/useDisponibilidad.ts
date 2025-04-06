@@ -48,8 +48,8 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
 
         const fechasDisponibles = new Set<string>();
         dias.forEach(dia => {
-          // Incluimos los días con cualquier tipo de disponibilidad
-          if (dia.tiene_disponibilidad || dia.estado === 'disponible' || dia.estado === 'parcialmente_bloqueado') {
+          // Solo incluimos días con disponibilidad real
+          if (dia.tiene_disponibilidad) {
             fechasDisponibles.add(format(new Date(dia.fecha), 'yyyy-MM-dd'));
           }
         });
@@ -103,7 +103,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
       setDiasSeleccionablesMes(new Set());
       cargarDiasDisponibles(mesActual.anio, mesActual.mes);
     }
-  }, [negocioId, mesActual, cargarDiasDisponibles]);
+  }, [negocioId, mesActual, cargarDiasDisponibles, servicioId]); // Adding servicioId dependency to refresh when it changes
 
   useEffect(() => {
     const cargarHorasDisponibles = async () => {
@@ -123,14 +123,6 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         const servicioIdParaEnviar = servicioId && servicioId.trim() !== '' ? servicioId : undefined;
 
         console.log(`Obteniendo horarios para negocio: ${negocioId}, fecha: ${fechaFormateada}, servicio: ${servicioIdParaEnviar || 'no especificado'}`);
-        
-        // Agregar console.log para verificar los parámetros exactos que enviamos a la RPC
-        const parametrosRPC = {
-          negocioId,
-          fechaFormateada,
-          servicioId: servicioIdParaEnviar
-        };
-        console.log('Llamando RPC con:', parametrosRPC);
         
         const result = await getHorariosDisponibles(
           negocioId,
@@ -175,6 +167,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
       }
     };
 
+    // Cargar horarios cuando cambia la fecha o servicio
     if (negocioId && fecha && (servicioId || servicioId === '')) {
       cargarHorasDisponibles();
     } else {

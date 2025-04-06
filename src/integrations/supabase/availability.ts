@@ -1,3 +1,4 @@
+
 import { supabase } from './base-client';
 import { DiaDisponible, HorarioDisponible } from '@/types';
 
@@ -18,23 +19,19 @@ export const getHorariosDisponibles = async (
   console.log('Obteniendo horarios disponibles para negocio ID:', negocioId, 'en fecha:', fechaStr, 'para servicio ID:', servicioId || 'undefined');
 
   try {
-    const params: {
-      p_negocio_id: string;
-      p_fecha: string;
-      p_duracion_minutos?: number;
+    // Preparar parámetros para la función RPC
+    const params: { 
+      p_negocio_id: string; 
+      p_fecha: string; 
       p_servicio_id?: string;
     } = {
       p_negocio_id: negocioId,
       p_fecha: fechaStr
     };
     
-    // ✅ Corregido: solo enviar uno de los dos parámetros
+    // Agregar servicio_id si se proporciona
     if (servicioId && servicioId.trim() !== '') {
       params.p_servicio_id = servicioId;
-      delete params.p_duracion_minutos;
-    } else {
-      params.p_duracion_minutos = 30;
-      delete params.p_servicio_id;
     }
     
     console.log('Parámetros para obtener_horarios_disponibles:', params);
@@ -147,9 +144,62 @@ export const verificarDisponibilidad = async (
       return { success: false, message: error.message, disponible: false };
     }
     
-    return { success: true, disponible: data || false };
+    return { success: true, disponible: !!data };
   } catch (err) {
     console.error('Error en verificarDisponibilidad:', err);
     return { success: false, message: 'Error al procesar la solicitud', disponible: false };
+  }
+};
+
+/**
+ * Creates a new appointment with double-checking availability
+ * @param citaData Appointment data
+ * @returns Result of creating the appointment
+ */
+export const crearCitaSegura = async (citaData: {
+  negocio_id: string;
+  nombre_cliente: string;
+  telefono_cliente: string;
+  servicio_id: string;
+  fecha: string;
+  hora_inicio: string;
+  hora_fin: string;
+}): Promise<{ success: boolean; message?: string; cita_id?: string }> => {
+  console.log('Creando cita segura:', citaData);
+  
+  try {
+    const { data, error } = await supabase.rpc(
+      "crear_cita_segura",
+      {
+        p_negocio_id: citaData.negocio_id,
+        p_cliente_nombre: citaData.nombre_cliente,
+        p_cliente_telefono: citaData.telefono_cliente,
+        p_servicio_id: citaData.servicio_id,
+        p_fecha: citaData.fecha,
+        p_hora_inicio: citaData.hora_inicio,
+        p_hora_fin: citaData.hora_fin
+      }
+    );
+    
+    if (error) {
+      console.error('Error al crear cita segura:', error);
+      return { success: false, message: error.message || 'Error al crear la cita' };
+    }
+    
+    if (data && data.success) {
+      return { 
+        success: true, 
+        message: data.message || 'Cita creada correctamente',
+        cita_id: data.cita_id
+      };
+    } else {
+      return { 
+        success: false, 
+        message: data?.message || 'No se pudo crear la cita' 
+      };
+    }
+  } catch (err) {
+    console.error('Error en crearCitaSegura:', err);
+    return { success: false, message: 'Error al procesar la solicitud' };
   }
 };

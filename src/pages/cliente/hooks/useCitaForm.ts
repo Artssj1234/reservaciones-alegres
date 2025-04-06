@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { createCita, getCitaByTelefono, verificarDisponibilidad } from '@/integrations/supabase/client';
+import { crearCitaSegura, getCitaByTelefono } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
 interface CitaFormData {
@@ -26,6 +26,7 @@ export const useCitaForm = (negocioId: string | undefined) => {
   const [verificarDialogOpen, setVerificarDialogOpen] = useState(false);
   const [telefono, setTelefono] = useState('');
   const [citasEncontradas, setCitasEncontradas] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,53 +100,53 @@ export const useCitaForm = (negocioId: string | undefined) => {
       return;
     }
     
+    if (isSubmitting) {
+      return; // Prevenir doble envío
+    }
+    
     try {
+      setIsSubmitting(true);
+      
       const servicio = servicios.find(s => s.id === formData.servicio_id);
-      if (!servicio || !negocioId) return;
+      if (!servicio || !negocioId) {
+        toast({
+          title: "Error",
+          description: "Servicio o negocio no encontrado.",
+          variant: "destructive",
+        });
+        return;
+      }
       
       // Calcular hora fin basada en la duración del servicio
       const [horas, minutos] = formData.hora_inicio.split(':').map(Number);
       const totalMinutos = horas * 60 + minutos + servicio.duracion_minutos;
       const horaFin = `${String(Math.floor(totalMinutos / 60)).padStart(2, '0')}:${String(totalMinutos % 60).padStart(2, '0')}`;
       
-      // Verificar disponibilidad antes de crear la cita
+      // Formato de fecha para base de datos
       const fechaFormateada = format(formData.fecha, 'yyyy-MM-dd');
-      const disponibilidadResult = await verificarDisponibilidad(
-        negocioId, 
-        fechaFormateada, 
-        formData.hora_inicio, 
-        horaFin
-      );
       
-      if (!disponibilidadResult.success || !disponibilidadResult.disponible) {
-        toast({
-          title: "Horario no disponible",
-          description: "El horario seleccionado ya no está disponible. Por favor, selecciona otro horario.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      const nuevaCita = {
+      // Usar la nueva función segura para crear citas
+      const citaData = {
         negocio_id: negocioId,
         nombre_cliente: formData.nombre_cliente,
         telefono_cliente: formData.telefono_cliente,
         servicio_id: formData.servicio_id,
         fecha: fechaFormateada,
         hora_inicio: formData.hora_inicio,
-        hora_fin: horaFin,
-        estado: 'pendiente'
+        hora_fin: horaFin
       };
       
-      const result = await createCita(nuevaCita);
+      const result = await crearCitaSegura(citaData);
       
       if (result.success) {
-        setCitaId(result.data.id);
+        if (result.cita_id) {
+          setCitaId(result.cita_id);
+        }
         setSuccess(true);
         
         toast({
           title: "¡Cita creada!",
-          description: "Tu solicitud de cita ha sido registrada correctamente.",
+          description: result.message || "Tu solicitud de cita ha sido registrada correctamente.",
         });
       } else {
         toast({
@@ -161,6 +162,8 @@ export const useCitaForm = (negocioId: string | undefined) => {
         description: "Ocurrió un error al crear la cita. Intenta de nuevo más tarde.",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -210,6 +213,7 @@ export const useCitaForm = (negocioId: string | undefined) => {
     verificarDialogOpen,
     telefono,
     citasEncontradas,
+    isSubmitting,
     setVerificarDialogOpen,
     setTelefono,
     handleInputChange,
