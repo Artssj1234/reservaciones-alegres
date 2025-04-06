@@ -100,7 +100,7 @@ const DateTimePicker = ({
       <div className="space-y-6">
         <h2 className="text-2xl font-bold text-center mb-4">Selecciona fecha y hora</h2>
         
-        <Alert variant="warning" className="bg-amber-50 border-amber-200 text-amber-800">
+        <Alert className="bg-amber-50 border-amber-200 text-amber-800">
           <AlertCircle className="h-4 w-4 mr-2" />
           <AlertDescription className="font-medium">
             Por favor, selecciona un servicio antes de consultar la disponibilidad.
