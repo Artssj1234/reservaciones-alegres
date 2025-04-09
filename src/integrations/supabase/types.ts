@@ -45,13 +45,6 @@ export type Database = {
             referencedRelation: "negocios"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "bloqueos_temporales_negocio_id_fkey"
-            columns: ["negocio_id"]
-            isOneToOne: false
-            referencedRelation: "vista_disponibilidad_negocios"
-            referencedColumns: ["negocio_id"]
-          },
         ]
       }
       citas: {
@@ -100,13 +93,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "citas_negocio_id_fkey"
-            columns: ["negocio_id"]
-            isOneToOne: false
-            referencedRelation: "vista_disponibilidad_negocios"
-            referencedColumns: ["negocio_id"]
-          },
-          {
             foreignKeyName: "citas_servicio_id_fkey"
             columns: ["servicio_id"]
             isOneToOne: false
@@ -117,7 +103,28 @@ export type Database = {
             foreignKeyName: "citas_servicio_id_fkey"
             columns: ["servicio_id"]
             isOneToOne: false
+            referencedRelation: "vista_bloques_disponibles"
+            referencedColumns: ["servicio_id"]
+          },
+          {
+            foreignKeyName: "citas_servicio_id_fkey"
+            columns: ["servicio_id"]
+            isOneToOne: false
+            referencedRelation: "vista_bloques_disponibles_libres"
+            referencedColumns: ["servicio_id"]
+          },
+          {
+            foreignKeyName: "citas_servicio_id_fkey"
+            columns: ["servicio_id"]
+            isOneToOne: false
             referencedRelation: "vista_disponibilidad_negocios"
+            referencedColumns: ["servicio_id"]
+          },
+          {
+            foreignKeyName: "citas_servicio_id_fkey"
+            columns: ["servicio_id"]
+            isOneToOne: false
+            referencedRelation: "vista_horarios_disponibles"
             referencedColumns: ["servicio_id"]
           },
         ]
@@ -161,32 +168,25 @@ export type Database = {
             referencedRelation: "negocios"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "clientes_negocio_id_fkey"
-            columns: ["negocio_id"]
-            isOneToOne: false
-            referencedRelation: "vista_disponibilidad_negocios"
-            referencedColumns: ["negocio_id"]
-          },
         ]
       }
       horarios_recurrentes: {
         Row: {
-          dia_semana: string
+          dia_semana: number | null
           hora_fin: string
           hora_inicio: string
           id: string
           negocio_id: string | null
         }
         Insert: {
-          dia_semana: string
+          dia_semana?: number | null
           hora_fin: string
           hora_inicio: string
           id?: string
           negocio_id?: string | null
         }
         Update: {
-          dia_semana?: string
+          dia_semana?: number | null
           hora_fin?: string
           hora_inicio?: string
           id?: string
@@ -199,13 +199,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "negocios"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "horarios_recurrentes_negocio_id_fkey"
-            columns: ["negocio_id"]
-            isOneToOne: false
-            referencedRelation: "vista_disponibilidad_negocios"
-            referencedColumns: ["negocio_id"]
           },
         ]
       }
@@ -244,13 +237,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "negocios"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "horas_bloqueadas_negocio_id_fkey"
-            columns: ["negocio_id"]
-            isOneToOne: false
-            referencedRelation: "vista_disponibilidad_negocios"
-            referencedColumns: ["negocio_id"]
           },
         ]
       }
@@ -337,13 +323,6 @@ export type Database = {
             referencedRelation: "negocios"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "servicios_negocio_id_fkey"
-            columns: ["negocio_id"]
-            isOneToOne: false
-            referencedRelation: "vista_disponibilidad_negocios"
-            referencedColumns: ["negocio_id"]
-          },
         ]
       }
       solicitudes_negocio: {
@@ -417,27 +396,13 @@ export type Database = {
       }
     }
     Views: {
-      vista_disponibilidad_negocios: {
+      vista_bloques_disponibles: {
         Row: {
-          dia_semana: string | null
-          duracion_minutos: number | null
-          horario_fin: string | null
-          horario_inicio: string | null
+          fecha: string | null
+          fin_bloque: string | null
+          inicio_bloque: string | null
           negocio_id: string | null
-          negocio_nombre: string | null
-          negocio_slug: string | null
           servicio_id: string | null
-          servicio_nombre: string | null
-        }
-        Relationships: []
-      }
-      vista_horarios_disponibles: {
-        Row: {
-          dia_semana: string | null
-          hora_fin: string | null
-          hora_inicio: string | null
-          negocio_id: string | null
-          nota: string | null
         }
         Relationships: [
           {
@@ -447,22 +412,69 @@ export type Database = {
             referencedRelation: "negocios"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      vista_bloques_disponibles_libres: {
+        Row: {
+          fecha: string | null
+          fin_bloque: string | null
+          inicio_bloque: string | null
+          negocio_id: string | null
+          servicio_id: string | null
+        }
+        Relationships: [
           {
             foreignKeyName: "horarios_recurrentes_negocio_id_fkey"
             columns: ["negocio_id"]
             isOneToOne: false
-            referencedRelation: "vista_disponibilidad_negocios"
-            referencedColumns: ["negocio_id"]
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vista_disponibilidad_negocios: {
+        Row: {
+          dia_semana: number | null
+          fin_bloque: string | null
+          inicio_bloque: string | null
+          negocio_id: string | null
+          nombre_servicio: string | null
+          servicio_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "horarios_recurrentes_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vista_horarios_disponibles: {
+        Row: {
+          dia_semana: number | null
+          duracion_minutos: number | null
+          hora_fin: string | null
+          hora_inicio: string | null
+          negocio_id: string | null
+          servicio_id: string | null
+          servicio_nombre: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "horarios_recurrentes_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
           },
         ]
       }
     }
     Functions: {
       custom_login: {
-        Args: {
-          p_username: string
-          p_password: string
-        }
+        Args: { p_username: string; p_password: string }
         Returns: Json
       }
       eliminar_bloqueos_expirados: {
@@ -470,21 +482,22 @@ export type Database = {
         Returns: undefined
       }
       execute_sql: {
-        Args: {
-          query: string
-        }
+        Args: { query: string }
         Returns: Json
       }
+      get_bloques_disponibles: {
+        Args: { p_negocio_id: string; p_servicio_id: string; p_fecha: string }
+        Returns: {
+          inicio_bloque: string
+          fin_bloque: string
+        }[]
+      }
       get_business_by_user_id: {
-        Args: {
-          p_user_id: string
-        }
+        Args: { p_user_id: string }
         Returns: Json
       }
       get_citas_hoy: {
-        Args: {
-          p_negocio_id: string
-        }
+        Args: { p_negocio_id: string }
         Returns: {
           id: string
           nombre_cliente: string
@@ -498,9 +511,7 @@ export type Database = {
         }[]
       }
       get_citas_pendientes: {
-        Args: {
-          p_negocio_id: string
-        }
+        Args: { p_negocio_id: string }
         Returns: {
           id: string
           nombre_cliente: string
@@ -512,10 +523,19 @@ export type Database = {
           estado: string
         }[]
       }
-      get_estadisticas_negocio: {
+      get_dias_con_disponibilidad: {
         Args: {
           p_negocio_id: string
+          p_servicio_id: string
+          p_anio: number
+          p_mes: number
         }
+        Returns: {
+          fecha: string
+        }[]
+      }
+      get_estadisticas_negocio: {
+        Args: { p_negocio_id: string }
         Returns: Json
       }
       obtener_dias_disponibles: {
@@ -532,28 +552,26 @@ export type Database = {
       obtener_dias_disponibles_mes: {
         Args: {
           p_negocio_id: string
-          p_anio: number
-          p_mes: number
-          p_servicio_id?: string
+          p_servicio_id: string
+          p_anio: string
+          p_mes: string
         }
         Returns: {
-          fecha: string
-          tiene_disponibilidad: boolean
-          estado: string
+          dia_disponible: string
         }[]
       }
       obtener_horarios_disponibles: {
-        Args: {
-          p_negocio_id: string
-          p_fecha: string
-          p_servicio_id?: string
-          p_duracion_minutos?: number
-        }
+        Args: { p_negocio_id: string; p_servicio_id: string; p_fecha: string }
         Returns: {
-          hora_inicio: string
-          hora_fin: string
-          disponible: boolean
-          estado: string
+          inicio_bloque: string
+          fin_bloque: string
+        }[]
+      }
+      obtener_horas_disponibles: {
+        Args: { p_negocio_id: string; p_servicio_id: string; p_fecha: string }
+        Returns: {
+          inicio_bloque: string
+          fin_bloque: string
         }[]
       }
       update_negocio_profile: {
@@ -598,27 +616,29 @@ export type Database = {
   }
 }
 
-type PublicSchema = Database[Extract<keyof Database, "public">]
+type DefaultSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
-        PublicSchema["Views"])
-    ? (PublicSchema["Tables"] &
-        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -626,20 +646,22 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -647,20 +669,22 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -668,21 +692,23 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof PublicSchema["Enums"]
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
     | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
-    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof PublicSchema["CompositeTypes"]
+    | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof Database },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof Database
@@ -691,6 +717,12 @@ export type CompositeTypes<
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
   ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
-    ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const

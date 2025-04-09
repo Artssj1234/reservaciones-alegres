@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
-import { createHorario, getHorariosByNegocioId, deleteHorario, updateHorario } from '@/integrations/supabase/client';
+import { createHorario, getHorariosByNegocioId, deleteHorario, updateHorario } from '@/integrations/supabase/schedules';
 import { Loader2, Trash2 } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface HorarioRecurrente {
   id: string;
@@ -182,47 +183,44 @@ const HorariosRecurrentesForm = ({ negocioId }: HorariosRecurrentesFormProps) =>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-6">
             <div>
-              <label className="text-sm font-medium">Día de la semana</label>
-              <Select value={nuevoHorario.dia_semana} onValueChange={handleDiaChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {diasSemana.map(dia => (
-                    <SelectItem key={dia.value} value={dia.value}>
-                      {dia.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium mb-2 block">Días de la semana</label>
+              <ToggleGroup type="single" value={nuevoHorario.dia_semana} onValueChange={handleDiaChange} className="flex flex-wrap gap-2">
+                {diasSemana.map(dia => (
+                  <ToggleGroupItem key={dia.value} value={dia.value} className="px-3 py-2">
+                    {dia.label}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
             </div>
             
-            <div>
-              <label className="text-sm font-medium">Hora inicio</label>
-              <Input 
-                type="time" 
-                name="hora_inicio" 
-                value={nuevoHorario.hora_inicio}
-                onChange={handleInputChange}
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium">Hora fin</label>
-              <Input 
-                type="time" 
-                name="hora_fin" 
-                value={nuevoHorario.hora_fin}
-                onChange={handleInputChange}
-              />
-            </div>
-            
-            <div className="flex items-end">
-              <Button onClick={handleGuardarHorario} className="w-full">
-                Agregar Horario
-              </Button>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium">Hora inicio</label>
+                <Input 
+                  type="time" 
+                  name="hora_inicio" 
+                  value={nuevoHorario.hora_inicio}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium">Hora fin</label>
+                <Input 
+                  type="time" 
+                  name="hora_fin" 
+                  value={nuevoHorario.hora_fin}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div className="flex items-end">
+                <Button onClick={handleGuardarHorario} className="w-full">
+                  Agregar Horario
+                </Button>
+              </div>
             </div>
           </div>
           

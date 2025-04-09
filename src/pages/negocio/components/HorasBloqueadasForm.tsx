@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,9 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { createHoraBloqueada, getHorasBloqueadasByNegocioId, deleteHoraBloqueada } from '@/integrations/supabase/client';
+import { createHoraBloqueada, getHorasBloqueadasByNegocioId, deleteHoraBloqueada } from '@/integrations/supabase/schedules';
 import { CalendarIcon, Loader2, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 interface HoraBloqueada {
@@ -77,7 +76,7 @@ const HorasBloqueadasForm = ({ negocioId }: HorasBloqueadasFormProps) => {
   };
 
   const handleDateChange = (date: Date | undefined) => {
-    if (date) {
+    if (date && isValid(date)) {
       setFechaSeleccionada(date);
       setNuevaHora(prev => ({
         ...prev,
@@ -172,8 +171,16 @@ const HorasBloqueadasForm = ({ negocioId }: HorasBloqueadasFormProps) => {
   };
 
   const formatFecha = (fechaStr: string) => {
-    const fecha = new Date(fechaStr);
-    return format(fecha, 'dd/MM/yyyy', { locale: es });
+    try {
+      const fecha = new Date(fechaStr);
+      if (!isValid(fecha)) {
+        return "Fecha inválida";
+      }
+      return format(fecha, 'dd/MM/yyyy', { locale: es });
+    } catch (error) {
+      console.error("Error al formatear fecha:", error);
+      return "Fecha inválida";
+    }
   };
 
   if (loading) {
@@ -191,28 +198,44 @@ const HorasBloqueadasForm = ({ negocioId }: HorasBloqueadasFormProps) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="text-sm font-medium">Fecha</label>
+              <label className="text-sm font-medium mb-2 block">Fecha</label>
               <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(fechaSeleccionada, "dd/MM/yyyy")}
+                    {fechaSeleccionada && isValid(fechaSeleccionada) 
+                      ? format(fechaSeleccionada, "dd/MM/yyyy") 
+                      : "Seleccionar fecha"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
                     selected={fechaSeleccionada}
                     onSelect={handleDateChange}
                     initialFocus
                     locale={es}
+                    className="p-3 pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
             </div>
             
+            <div>
+              <label className="text-sm font-medium mb-2 block">Motivo (opcional)</label>
+              <Input 
+                type="text" 
+                name="motivo" 
+                value={nuevaHora.motivo}
+                onChange={handleInputChange}
+                placeholder="Ej: Reunión, Descanso..."
+              />
+            </div>
+          </div>
+            
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="text-sm font-medium">Hora inicio</label>
               <Input 
@@ -230,17 +253,6 @@ const HorasBloqueadasForm = ({ negocioId }: HorasBloqueadasFormProps) => {
                 name="hora_fin" 
                 value={nuevaHora.hora_fin}
                 onChange={handleInputChange}
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium">Motivo (opcional)</label>
-              <Input 
-                type="text" 
-                name="motivo" 
-                value={nuevaHora.motivo}
-                onChange={handleInputChange}
-                placeholder="Ej: Reunión, Descanso..."
               />
             </div>
             
