@@ -36,9 +36,16 @@ export const getHorariosDisponibles = async (
 
     console.log(`Se encontraron ${data?.length || 0} horarios para la fecha ${fecha}`);
     
+    // Transformar el formato de datos para que coincida con HorarioDisponible
+    const horariosFormateados: HorarioDisponible[] = data?.map(bloque => ({
+      hora_inicio: bloque.inicio_bloque.toString().substring(11, 16), // Extraer HH:MM del timestamp
+      hora_fin: bloque.fin_bloque.toString().substring(11, 16), // Extraer HH:MM del timestamp
+      disponible: true // Si aparece en la lista, está disponible
+    })) || [];
+    
     return {
       success: true,
-      data: data || []
+      data: horariosFormateados
     };
   } catch (error) {
     console.error('Error en getHorariosDisponibles:', error);
@@ -69,11 +76,12 @@ export const getDiasDisponibles = async (
     console.log(`Consultando días disponibles para negocio=${negocioId}, año=${anio}, mes=${mes}, servicio=${servicioId}`);
     
     // Usamos la función de Supabase que tiene en cuenta horarios recurrentes y bloqueados
+    // Convertimos anio y mes a string para la función de Supabase
     const { data, error } = await supabase
       .rpc('obtener_dias_disponibles_mes', {
         p_negocio_id: negocioId,
-        p_anio: anio,
-        p_mes: mes,
+        p_anio: anio.toString(),
+        p_mes: mes.toString(),
         p_servicio_id: servicioId
       });
 
@@ -82,13 +90,13 @@ export const getDiasDisponibles = async (
       return { success: false, message: error.message };
     }
 
-    // Formatear fechas para el frontend
-    const diasFormateados = data?.map(dia => ({
-      ...dia,
-      fecha: typeof dia.fecha === 'string' ? dia.fecha : format(new Date(dia.fecha), 'yyyy-MM-dd')
+    // Transformar el formato de datos para que coincida con DiaDisponible
+    const diasFormateados: DiaDisponible[] = data?.map(dia => ({
+      fecha: dia.dia_disponible, // Usar directamente el campo dia_disponible
+      tiene_disponibilidad: true // Si está en la lista, tiene disponibilidad
     })) || [];
 
-    console.log(`Se encontraron ${diasFormateados.length} días para el mes ${mes}/${anio}`);
+    console.log(`Se encontraron ${diasFormateados.length} días disponibles para el mes ${mes}/${anio}`);
     
     return {
       success: true,
