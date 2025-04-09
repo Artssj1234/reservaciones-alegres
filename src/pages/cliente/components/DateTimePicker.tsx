@@ -46,7 +46,9 @@ const DateTimePicker = ({
   const [horasDisponiblesFiltered, setHorasDisponiblesFiltered] = useState<HorarioDisponible[]>([]);
   
   // Debug logs
-  console.log("DateTimePicker - diasSeleccionablesMes:", diasSeleccionablesMes, "size:", diasSeleccionablesMes.size);
+  console.log("DateTimePicker - diasSeleccionablesMes:", 
+    Array.from(diasSeleccionablesMes).join(", "), 
+    "size:", diasSeleccionablesMes.size);
   console.log("DateTimePicker - fechaSeleccionada:", fechaSeleccionada);
   console.log("DateTimePicker - error:", error);
   

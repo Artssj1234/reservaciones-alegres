@@ -38,8 +38,8 @@ export const getHorariosDisponibles = async (
     
     // Transformar el formato de datos para que coincida con HorarioDisponible
     const horariosFormateados: HorarioDisponible[] = data?.map(bloque => ({
-      hora_inicio: bloque.inicio_bloque.toString().substring(11, 16), // Extraer HH:MM del timestamp
-      hora_fin: bloque.fin_bloque.toString().substring(11, 16), // Extraer HH:MM del timestamp
+      hora_inicio: String(bloque.hora_inicio).substring(0, 5), // Extraer HH:MM del timestamp
+      hora_fin: String(bloque.hora_fin).substring(0, 5), // Extraer HH:MM del timestamp
       disponible: true // Si aparece en la lista, está disponible
     })) || [];
     
@@ -79,8 +79,8 @@ export const getDiasDisponibles = async (
     const { data, error } = await supabase
       .rpc('obtener_dias_disponibles_mes', {
         p_negocio_id: negocioId,
-        p_anio: anio.toString(),
-        p_mes: mes.toString(),
+        p_anio: String(anio),
+        p_mes: String(mes),
         p_servicio_id: servicioId
       });
 

@@ -167,9 +167,7 @@ CREATE OR REPLACE FUNCTION public.obtener_dias_disponibles_mes(
     p_servicio_id UUID DEFAULT NULL
 )
 RETURNS TABLE(
-    fecha DATE,
-    tiene_disponibilidad BOOLEAN,
-    estado TEXT
+    dia_disponible DATE
 ) AS $$
 DECLARE
     v_inicio_mes DATE;
@@ -216,16 +214,11 @@ BEGIN
         SELECT EXISTS(
             SELECT 1 FROM horarios_recurrentes hr
             WHERE hr.negocio_id = p_negocio_id 
-            AND hr.dia_semana = LOWER(trim(to_char(v_fecha_temp, 'day')))
+            AND hr.dia_semana = EXTRACT(DOW FROM v_fecha_temp)::int
         ) INTO v_hay_horario;
         
         -- Skip checking slots if there's no schedule for this day
         IF NOT v_hay_horario THEN
-            fecha := v_fecha_temp;
-            tiene_disponibilidad := FALSE;
-            estado := 'sin_horario';
-            RETURN NEXT;
-            
             -- Move to next day
             v_fecha_temp := v_fecha_temp + interval '1 day';
             CONTINUE;
@@ -238,27 +231,11 @@ BEGIN
             WHERE disponible = true
         ) INTO v_hay_slots;
         
-        fecha := v_fecha_temp;
-        tiene_disponibilidad := v_hay_slots;
-        
-        -- Add status information
-        IF NOT v_hay_horario THEN
-            estado := 'sin_horario';
-        ELSIF NOT v_hay_slots THEN
-            -- Check why there are no slots
-            IF EXISTS (
-                SELECT 1 FROM horas_bloqueadas
-                WHERE negocio_id = p_negocio_id AND fecha = v_fecha_temp
-            ) THEN
-                estado := 'bloqueado';
-            ELSE
-                estado := 'completamente_reservado';
-            END IF;
-        ELSE
-            estado := 'disponible';
+        IF v_hay_slots THEN
+            -- If there are available slots, return this day
+            dia_disponible := v_fecha_temp;
+            RETURN NEXT;
         END IF;
-        
-        RETURN NEXT;
         
         -- Move to next day
         v_fecha_temp := v_fecha_temp + interval '1 day';
