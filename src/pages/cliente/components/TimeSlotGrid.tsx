@@ -29,7 +29,7 @@ const TimeSlotGrid = ({
     return `${day} de ${month} ${year}`;
   };
   
-  // Group time slots by morning/afternoon for better organization
+  // Agrupar los horarios por mañana/tarde para mejor organización
   const organizeTimeSlots = (slots: HorarioDisponible[]) => {
     const morning: HorarioDisponible[] = [];
     const afternoon: HorarioDisponible[] = [];
@@ -73,6 +73,7 @@ const TimeSlotGrid = ({
     );
   }
 
+  // Filtrar solo los slots disponibles
   const availableSlots = horasDisponiblesFiltered.filter(hora => hora.disponible);
   
   if (horasDisponiblesFiltered.length === 0 || availableSlots.length === 0) {
@@ -87,19 +88,22 @@ const TimeSlotGrid = ({
             ? "No hay horarios configurados para esta fecha." 
             : "Todos los horarios están ocupados para esta fecha."}
         </p>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="gap-2 text-sm border-gray-300 hover:bg-gray-100 hover:text-gray-700"
-          onClick={onContactClick}
-        >
-          <PhoneCall className="h-4 w-4" />
-          Contactar al negocio
-        </Button>
+        {onContactClick && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-2 text-sm border-gray-300 hover:bg-gray-100 hover:text-gray-700"
+            onClick={onContactClick}
+          >
+            <PhoneCall className="h-4 w-4" />
+            Contactar al negocio
+          </Button>
+        )}
       </div>
     );
   }
 
+  // Organizar horarios por mañana/tarde/noche
   const { morning, afternoon, evening } = organizeTimeSlots(availableSlots);
   
   const renderTimeSection = (title: string, slots: HorarioDisponible[]) => {
@@ -153,15 +157,17 @@ const TimeSlotGrid = ({
           <p className="text-gray-700 font-medium">
             No hay horas disponibles en esta fecha
           </p>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="mt-3 gap-2 text-sm border-amber-300 hover:bg-amber-50 text-amber-600"
-            onClick={onContactClick}
-          >
-            <PhoneCall className="h-4 w-4" />
-            Contactar al negocio
-          </Button>
+          {onContactClick && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="mt-3 gap-2 text-sm border-amber-300 hover:bg-amber-50 text-amber-600"
+              onClick={onContactClick}
+            >
+              <PhoneCall className="h-4 w-4" />
+              Contactar al negocio
+            </Button>
+          )}
         </div>
       )}
     </div>

@@ -103,6 +103,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
     }
   }, [mesActual]);
 
+  // Efecto para cargar días disponibles al cambiar el mes o negocio
   useEffect(() => {
     if (negocioId) {
       console.log(`Loading availability for business ID ${negocioId} for month ${mesActual.mes}/${mesActual.anio}`);
@@ -119,6 +120,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
     }
   }, [negocioId, mesActual, cargarDiasDisponibles, servicioId]);
 
+  // Efecto para cargar horas disponibles al cambiar la fecha
   useEffect(() => {
     const cargarHorasDisponibles = async () => {
       if (!negocioId || !fecha) {

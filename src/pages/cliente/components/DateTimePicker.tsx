@@ -50,7 +50,7 @@ const DateTimePicker = ({
     setFechaSeleccionada(date);
   }, [date]);
   
-  // Filter available times to show only those that are actually available
+  // Filtrar tiempos disponibles para mostrar solo los que están realmente disponibles
   useEffect(() => {
     if (horasDisponibles && horasDisponibles.length > 0) {
       console.log('Filtrando horarios disponibles:', horasDisponibles);
@@ -123,7 +123,7 @@ const DateTimePicker = ({
     );
   }
 
-  // Show error message if no available days and not in loading state
+  // Mostrar mensaje de error si no hay días disponibles y no estamos cargando
   if ((diasSeleccionablesMes.size === 0 && !cargandoHorarios) || error) {
     return <NoAvailabilityAlert 
       cargandoHorarios={false} 

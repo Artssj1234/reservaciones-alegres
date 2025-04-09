@@ -20,7 +20,7 @@ const DatePickerCalendar = ({
   onMonthChange
 }: DatePickerCalendarProps) => {
   const hoy = startOfDay(new Date());
-  const limiteMaximo = addMonths(hoy, 2);
+  const limiteMaximo = addMonths(hoy, 2); // Permitir reservas con 2 meses de anticipación
 
   const esDiaDisponible = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');

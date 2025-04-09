@@ -21,6 +21,7 @@ export const getHorariosDisponibles = async (
   try {
     console.log(`Consultando horarios para negocio=${negocioId}, fecha=${fecha}, servicio=${servicioId}`);
     
+    // Llamamos directamente a la función de Supabase que considera horarios recurrentes y bloqueados
     const { data, error } = await supabase
       .rpc('obtener_horarios_disponibles', {
         p_negocio_id: negocioId,
@@ -34,7 +35,6 @@ export const getHorariosDisponibles = async (
     }
 
     console.log(`Se encontraron ${data?.length || 0} horarios para la fecha ${fecha}`);
-    console.log('Detalle de horarios:', data);
     
     return {
       success: true,
@@ -66,8 +66,9 @@ export const getDiasDisponibles = async (
   }
 
   try {
-    console.log(`Consultando dias disponibles para negocio=${negocioId}, año=${anio}, mes=${mes}, servicio=${servicioId}`);
+    console.log(`Consultando días disponibles para negocio=${negocioId}, año=${anio}, mes=${mes}, servicio=${servicioId}`);
     
+    // Usamos la función de Supabase que tiene en cuenta horarios recurrentes y bloqueados
     const { data, error } = await supabase
       .rpc('obtener_dias_disponibles_mes', {
         p_negocio_id: negocioId,
@@ -113,6 +114,7 @@ export const verificarDisponibilidad = async (
   }
 
   try {
+    // Usamos la función de verificación de disponibilidad que considera horarios y bloqueos
     const { data, error } = await supabase
       .rpc('verificar_disponibilidad', {
         p_negocio_id: negocioId,
@@ -139,7 +141,7 @@ export const verificarDisponibilidad = async (
   }
 };
 
-// Updated to use a direct query with structured parameters instead of rpc
+// Updated to crear una cita verificando disponibilidad primero
 export const crearCitaSegura = async (
   citaData: {
     negocio_id: string,
@@ -157,7 +159,7 @@ export const crearCitaSegura = async (
   }
 
   try {
-    // First verify availability
+    // Primero verificamos la disponibilidad
     const disponibilidadResult = await verificarDisponibilidad(
       citaData.negocio_id,
       citaData.fecha,
@@ -172,7 +174,7 @@ export const crearCitaSegura = async (
       };
     }
 
-    // If available, create the appointment
+    // Si está disponible, creamos la cita directamente
     const { data, error } = await supabase
       .from('citas')
       .insert([{
@@ -207,6 +209,7 @@ export const crearCitaSegura = async (
   }
 };
 
+// Función para buscar las citas de un cliente por su teléfono
 export const buscarCitasPorTelefono = async (
   telefono: string
 ): Promise<{ success: boolean; message?: string; citas?: any[] }> => {
@@ -215,6 +218,7 @@ export const buscarCitasPorTelefono = async (
   }
 
   try {
+    // Consultamos las citas con join a los servicios y negocios
     const { data, error } = await supabase
       .from('citas')
       .select(`
