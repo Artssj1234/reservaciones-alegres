@@ -34,7 +34,7 @@ export const getHorariosDisponibles = async (
       return { success: false, message: error.message };
     }
 
-    console.log(`Se encontraron ${data?.length || 0} horarios para la fecha ${fecha}`);
+    console.log(`Se encontraron ${data?.length || 0} horarios para la fecha ${fecha}`, data);
     
     // Transformar el formato de datos para que coincida con HorarioDisponible
     const horariosFormateados: HorarioDisponible[] = data?.map(bloque => ({
@@ -76,7 +76,6 @@ export const getDiasDisponibles = async (
     console.log(`Consultando días disponibles para negocio=${negocioId}, año=${anio}, mes=${mes}, servicio=${servicioId}`);
     
     // Usamos la función de Supabase que tiene en cuenta horarios recurrentes y bloqueados
-    // Convertimos anio y mes a string para la función de Supabase
     const { data, error } = await supabase
       .rpc('obtener_dias_disponibles_mes', {
         p_negocio_id: negocioId,
@@ -89,6 +88,8 @@ export const getDiasDisponibles = async (
       console.error('Error al obtener días disponibles:', error);
       return { success: false, message: error.message };
     }
+
+    console.log('Días disponibles recibidos:', data);
 
     // Transformar el formato de datos para que coincida con DiaDisponible
     const diasFormateados: DiaDisponible[] = data?.map(dia => ({

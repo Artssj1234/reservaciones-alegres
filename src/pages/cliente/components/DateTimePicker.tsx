@@ -45,6 +45,11 @@ const DateTimePicker = ({
   const [fechaSeleccionada, setFechaSeleccionada] = useState<Date | undefined>(date);
   const [horasDisponiblesFiltered, setHorasDisponiblesFiltered] = useState<HorarioDisponible[]>([]);
   
+  // Debug logs
+  console.log("DateTimePicker - diasSeleccionablesMes:", diasSeleccionablesMes, "size:", diasSeleccionablesMes.size);
+  console.log("DateTimePicker - fechaSeleccionada:", fechaSeleccionada);
+  console.log("DateTimePicker - error:", error);
+  
   useEffect(() => {
     // Actualizar fechaSeleccionada cuando cambia date (para sincronización)
     setFechaSeleccionada(date);
@@ -126,7 +131,7 @@ const DateTimePicker = ({
   // Mostrar mensaje de error si no hay días disponibles y no estamos cargando
   if ((diasSeleccionablesMes.size === 0 && !cargandoHorarios) || error) {
     return <NoAvailabilityAlert 
-      cargandoHorarios={false} 
+      cargandoHorarios={cargandoHorarios} 
       onBack={onBack} 
       error={error} 
       onContactClick={onContactClick} 

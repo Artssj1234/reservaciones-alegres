@@ -55,6 +55,7 @@ const CitaPublicaPage = () => {
     handleMonthChange
   } = useDisponibilidad(negocio?.id, formData.servicio_id, formData.fecha);
 
+  // Debug logs para la página principal
   useEffect(() => {
     if (negocio) {
       console.log("CitaPublicaPage loaded with data:", {

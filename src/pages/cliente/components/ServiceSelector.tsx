@@ -26,6 +26,7 @@ const ServiceSelector = ({
   onNext 
 }: ServiceSelectorProps) => {
   
+  // Mensaje cuando no hay servicios configurados
   if (servicios.length === 0) {
     return (
       <div className="space-y-4">
@@ -37,6 +38,9 @@ const ServiceSelector = ({
       </div>
     );
   }
+
+  console.log("ServiceSelector - Servicios disponibles:", servicios);
+  console.log("ServiceSelector - Servicio seleccionado:", selectedServiceId);
 
   return (
     <div className="space-y-6">

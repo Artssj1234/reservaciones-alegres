@@ -26,7 +26,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
       return;
     }
 
-    // Validar que haya un servicio seleccionado
+    // Solo cargar días disponibles si hay un servicio seleccionado
     if (!servicioId || servicioId.trim() === '') {
       console.log("No service selected, skipping day availability loading");
       setDiasDisponibles([]);
@@ -46,6 +46,8 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         mes,
         servicioId
       );
+
+      console.log("Resultado de getDiasDisponibles:", diasDispResult);
 
       if (diasDispResult.success && diasDispResult.data) {
         const dias = diasDispResult.data;
@@ -103,14 +105,14 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
     }
   }, [mesActual]);
 
-  // Efecto para cargar días disponibles al cambiar el mes o negocio
+  // Efecto para cargar días disponibles al cambiar el mes, negocio o servicio
   useEffect(() => {
     if (negocioId) {
-      console.log(`Loading availability for business ID ${negocioId} for month ${mesActual.mes}/${mesActual.anio}`);
-      setDiasSeleccionablesMes(new Set());
+      console.log(`Loading availability for business ID ${negocioId} for month ${mesActual.mes}/${mesActual.anio} and service ${servicioId}`);
       
-      // Solo cargar días disponibles si hay un servicio seleccionado
+      // Limpiar estados al cambiar servicio
       if (servicioId && servicioId.trim() !== '') {
+        setDiasSeleccionablesMes(new Set());
         cargarDiasDisponibles(mesActual.anio, mesActual.mes);
       } else {
         setDiasDisponibles([]);
@@ -120,7 +122,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
     }
   }, [negocioId, mesActual, cargarDiasDisponibles, servicioId]);
 
-  // Efecto para cargar horas disponibles al cambiar la fecha
+  // Efecto para cargar horas disponibles al cambiar la fecha o servicio
   useEffect(() => {
     const cargarHorasDisponibles = async () => {
       if (!negocioId || !fecha) {
@@ -129,7 +131,7 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
         return;
       }
 
-      // Validar que haya un servicio seleccionado
+      // Solo cargar horas disponibles si hay un servicio seleccionado
       if (!servicioId || servicioId.trim() === '') {
         console.log("No service selected, skipping time slot loading");
         setHorasDisponibles([]);
@@ -151,6 +153,8 @@ export const useDisponibilidad = (negocioId: string | undefined, servicioId: str
           fechaFormateada,
           servicioId
         );
+
+        console.log("Resultado de getHorariosDisponibles:", result);
 
         if (result.success && result.data) {
           console.log('Horarios recibidos:', result.data);

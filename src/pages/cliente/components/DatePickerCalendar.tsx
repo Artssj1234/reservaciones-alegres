@@ -22,10 +22,15 @@ const DatePickerCalendar = ({
   const hoy = startOfDay(new Date());
   const limiteMaximo = addMonths(hoy, 2); // Permitir reservas con 2 meses de anticipación
 
+  // Función para verificar si una fecha está disponible
   const esDiaDisponible = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     return diasSeleccionablesMes.has(dateStr);
   };
+
+  console.log("DatePickerCalendar - diasSeleccionablesMes:", 
+    Array.from(diasSeleccionablesMes).join(", "), 
+    "tamaño:", diasSeleccionablesMes.size);
 
   const mostrarAvisoSinDisponibilidad = diasSeleccionablesMes.size === 0;
 
